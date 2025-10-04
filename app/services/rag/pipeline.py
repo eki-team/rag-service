@@ -10,7 +10,7 @@ from app.services.rag.repository import get_repository_service
 from app.services.rag.retriever import Retriever
 from app.services.rag.context_builder import ContextBuilder
 from app.services.rag.prompts.free_nasa import SYNTHESIS_PROMPT
-from app.services.embeddings.sentence_transformer import get_embeddings_service
+from app.services.embeddings import get_embeddings_service  # Usa OpenAI embeddings (1536 dims)
 from app.core.settings import settings
 from collections import Counter
 import logging

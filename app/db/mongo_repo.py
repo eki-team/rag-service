@@ -91,10 +91,10 @@ class MongoRepository:
                         "index": settings.MONGODB_VECTOR_INDEX,
                         "path": "embedding",
                         "queryVector": query_vec,
-                        "numCandidates": top_k * 10,  # Candidatos para mejorar recall
+                        "numCandidates": top_k * 10, 
                         "limit": top_k,
-                        "similarity": "cosine",  # Similitud de coseno
-                    }
+                        "similarity": "cosine",
+               }
                 },
                 {
                     "$addFields": {
@@ -104,7 +104,7 @@ class MongoRepository:
             ]
             
             # Agregar filtros con $match
-            match_conditions = {"pk": settings.NASA_DEFAULT_ORG}
+            match_conditions = {}  # Remover filtro de pk para buscar en todos los documentos
             
             if filters:
                 if "organism" in filters and filters["organism"]:
@@ -215,11 +215,11 @@ class MongoRepository:
         Obtener lista de documentos únicos (agrupados por source_id principal)
         """
         try:
+            # Pipeline simplificado: agrupa por DOI para obtener documentos únicos
             pipeline = [
-                {"$match": {"pk": settings.NASA_DEFAULT_ORG}},
                 {
                     "$group": {
-                        "_id": "$doi",  # Agrupar por DOI o paper principal
+                        "_id": "$doi",  # Agrupar por DOI para evitar duplicados
                         "source_id": {"$first": "$source_id"},
                         "title": {"$first": "$title"},
                         "year": {"$first": "$year"},
@@ -231,7 +231,8 @@ class MongoRepository:
                         "system": {"$first": "$system"},
                         "tissue": {"$first": "$tissue"},
                         "assay": {"$first": "$assay"},
-                        "chunk_count": {"$sum": 1}
+                        "chunk_count": {"$sum": 1},
+                        "text_preview": {"$first": "$text"}  # Preview del primer chunk
                     }
                 },
                 {"$sort": {"year": -1}},
@@ -251,7 +252,8 @@ class MongoRepository:
                         "system": 1,
                         "tissue": 1,
                         "assay": 1,
-                        "chunk_count": 1
+                        "chunk_count": 1,
+                        "text_preview": {"$substr": ["$text_preview", 0, 200]}  # Primeros 200 chars
                     }
                 }
             ]
@@ -264,7 +266,7 @@ class MongoRepository:
             return []
     
     def count_documents(self, filters: Optional[Dict[str, Any]] = None) -> int:
-        """Contar documentos únicos con filtros opcionales"""
+        """Contar documentos únicos (por DOI) con filtros opcionales"""
         try:
             match_query = {}
             
@@ -280,18 +282,19 @@ class MongoRepository:
                 if "search_text" in filters and filters["search_text"]:
                     match_query["$or"] = [
                         {"text": {"$regex": filters["search_text"], "$options": "i"}},
-                        {"metadata.article_metadata.title": {"$regex": filters["search_text"], "$options": "i"}},
-                        {"metadata.tags": {"$regex": filters["search_text"], "$options": "i"}}
+                        {"title": {"$regex": filters["search_text"], "$options": "i"}},
                     ]
             
+            # Contar documentos únicos por DOI
             pipeline = [
                 {"$match": match_query} if match_query else {"$match": {}},
-                {"$group": {"_id": "$pk"}},
+                {"$group": {"_id": "$doi"}},  # Agrupar por DOI
                 {"$count": "total"}
             ]
             
             result = list(self.collection.aggregate(pipeline))
             count = result[0]["total"] if result else 0
+            logger.info(f"📊 Count: {count} unique documents")
             return count
         except PyMongoError as e:
             logger.error(f"❌ count_documents error: {e}")
