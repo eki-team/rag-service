@@ -63,16 +63,42 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Editar .env con tus credenciales (OpenAI, MongoDB)
+# Editar .env con tus credenciales (OpenAI API key para LLM, MongoDB URI)
 ```
 
-### 3. Correr el servicio
+**Nota**: Los embeddings son **locales** (no requieren API key). El modelo `all-MiniLM-L6-v2` se descarga automáticamente (~80 MB) en la primera ejecución.
+
+### 3. Test embeddings (opcional)
+
+```bash
+python test_embeddings.py
+```
+
+Esto verifica que sentence-transformers funcione correctamente y muestra el rendimiento.
+
+### 4. Correr el servicio
 
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
-Abre http://localhost:8000/docs para ver la documentación Swagger.
+### 5. Test rápido (sin Postman)
+
+```bash
+python quick_test_chat.py
+```
+
+Esto verifica que el endpoint `/api/chat` funcione correctamente.
+
+### 6. Testing con Postman
+
+📦 **Importa la colección**: `NASA_RAG.postman_collection.json`
+
+Ver guía completa en: **[POSTMAN_GUIDE.md](POSTMAN_GUIDE.md)**
+
+**Documentación interactiva:**
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
 
 ---
 
@@ -164,7 +190,7 @@ Cada chunk indexado en el vector store:
   "exposure": "microgravity",
   "section": "Results",
   "text": "Chunk text...",
-  "embedding": [0.1, 0.2, ...]
+  "embedding": [0.1, 0.2, ...]  # 384 dims (all-MiniLM-L6-v2)
 }
 ```
 

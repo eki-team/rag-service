@@ -1,0 +1,232 @@
+{
+  "info": {
+    "name": "NASA RAG Service",
+    "description": "Colección Postman para el servicio RAG de biología espacial de NASA",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Chat - Simple Query",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"What are the effects of microgravity on mice?\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/chat",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "chat"]
+        },
+        "description": "Query simple sin filtros. Ideal para pruebas rápidas."
+      },
+      "response": []
+    },
+    {
+      "name": "Chat - Con Filtros (Organism)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"How does spaceflight affect immune response?\",\n  \"filters\": {\n    \"organism\": [\"Mus musculus\"]\n  },\n  \"top_k\": 8\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/chat",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "chat"]
+        },
+        "description": "Query con filtro de organismo (ratones)."
+      },
+      "response": []
+    },
+    {
+      "name": "Chat - Con Múltiples Filtros",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"What are the cardiovascular effects of microgravity?\",\n  \"filters\": {\n    \"organism\": [\"Mus musculus\", \"Homo sapiens\"],\n    \"mission_env\": [\"ISS\", \"LEO\"],\n    \"exposure\": [\"microgravity\"],\n    \"system\": [\"cardiovascular\"]\n  },\n  \"top_k\": 10\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/chat",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "chat"]
+        },
+        "description": "Query con múltiples filtros combinados."
+      },
+      "response": []
+    },
+    {
+      "name": "Chat - Con Year Range",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"Recent studies on bone loss in space\",\n  \"filters\": {\n    \"year_range\": [2020, 2024],\n    \"system\": [\"musculoskeletal\"]\n  },\n  \"top_k\": 5\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/chat",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "chat"]
+        },
+        "description": "Query con filtro de rango de años (estudios recientes)."
+      },
+      "response": []
+    },
+    {
+      "name": "Chat - Radiation Studies",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"What are the biological effects of space radiation?\",\n  \"filters\": {\n    \"exposure\": [\"radiation\", \"cosmic rays\"]\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/chat",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "chat"]
+        },
+        "description": "Query sobre efectos de radiación espacial."
+      },
+      "response": []
+    },
+    {
+      "name": "Chat - Plant Biology",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"How do plants grow in microgravity?\",\n  \"filters\": {\n    \"organism\": [\"Arabidopsis thaliana\"],\n    \"mission_env\": [\"ISS\"]\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/chat",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "chat"]
+        },
+        "description": "Query sobre biología de plantas en el espacio."
+      },
+      "response": []
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/diag/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["diag", "health"]
+        },
+        "description": "Verifica el estado del servicio."
+      },
+      "response": []
+    },
+    {
+      "name": "Test Embedding",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"microgravity effects on immune system\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/diag/emb",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["diag", "emb"]
+        },
+        "description": "Genera embedding de un texto (debug). Retorna vector de 384 dimensiones."
+      },
+      "response": []
+    },
+    {
+      "name": "Test Retrieval (sin LLM)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"What are the effects of microgravity?\",\n  \"top_k\": 5\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/diag/retrieval",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["diag", "retrieval"]
+        },
+        "description": "Test de retrieval sin síntesis LLM. Retorna chunks recuperados directamente."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}

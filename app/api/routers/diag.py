@@ -40,7 +40,7 @@ async def health():
             vector_backend=settings.VECTOR_BACKEND,
             models={
                 "chat": settings.OPENAI_CHAT_MODEL,
-                "embed": settings.OPENAI_EMBED_MODEL,
+                "embed": f"{settings.EMBEDDING_MODEL} (local, {settings.EMBEDDING_DIMENSIONS}D)",
             },
             nasa_mode=settings.NASA_MODE,
             guided_enabled=settings.NASA_GUIDED_ENABLED,
@@ -59,28 +59,17 @@ async def health():
 
 @router.post("/emb", response_model=EmbeddingResponse)
 async def get_embedding(request: EmbeddingRequest):
-    """Generar embedding de un texto (debug)"""
+    """Generar embedding de un texto usando sentence-transformers (debug)"""
     try:
-        url = "https://api.openai.com/v1/embeddings"
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "input": request.text,
-            "model": settings.OPENAI_EMBED_MODEL,
-        }
+        from app.services.embeddings.sentence_transformer import get_embeddings_service
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            embedding = data["data"][0]["embedding"]
+        emb_service = get_embeddings_service()
+        embedding = emb_service.encode_query(request.text)
         
         return EmbeddingResponse(
             text=request.text,
             embedding=embedding,
-            model=settings.OPENAI_EMBED_MODEL,
+            model=settings.EMBEDDING_MODEL,
             dimensions=len(embedding),
         )
     
@@ -96,8 +85,8 @@ async def test_retrieval(request: RetrievalRequest):
         start = time()
         pipeline = get_rag_pipeline()
         
-        # Generar embedding
-        query_vec = await pipeline._get_embedding(request.query)
+        # Generar embedding (síncrono, rápido)
+        query_vec = pipeline._get_embedding(request.query)
         
         # Retrieval
         from app.schemas.chat import FilterFacets
