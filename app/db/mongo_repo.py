@@ -4,42 +4,65 @@ Repositorio para MongoDB con vector search (Atlas Vector Search).
 """
 from typing import List, Dict, Any, Optional
 from pymongo import MongoClient
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, ServerSelectionTimeoutError
 from app.core.settings import settings
 import logging
-import dns.resolver
 
 logger = logging.getLogger(__name__)
-
-# Configurar DNS resolver para usar Google DNS (soluciona problemas de DNS timeout)
-dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
-dns.resolver.default_resolver.nameservers = ['8.8.8.8', '8.8.4.4', '1.1.1.1']
-dns.resolver.default_resolver.timeout = 10
-dns.resolver.default_resolver.lifetime = 30
 
 
 class MongoRepository:
     """Repositorio para MongoDB con Atlas Vector Search"""
     
     def __init__(self):
-        self.client = MongoClient(
-            settings.MONGODB_URI,
-            serverSelectionTimeoutMS=60000,
-            connectTimeoutMS=60000,
-            socketTimeoutMS=60000,
-            # Configuración adicional para Atlas
-            retryWrites=True,
-            retryReads=True,
-            w='majority',
-            # Opciones de TLS/SSL para Atlas (más permisivo para DNS issues)
-            tls=True,
-            tlsAllowInvalidCertificates=True,  # Temporalmente permisivo
-            # Importante: No usar directConnection con SRV
-            directConnection=False
-        )
-        self.database = self.client[settings.MONGODB_DB]
-        self.collection = self.database[settings.MONGODB_COLLECTION]
-        logger.info(f"✅ MongoDB repo initialized: {settings.MONGODB_DB}/{settings.MONGODB_COLLECTION}")
+        """
+        Inicializa el cliente MongoDB con configuración optimizada
+        Similar a ETL-service para mejor compatibilidad
+        """
+        # Detectar si es mongodb+srv:// o mongodb://
+        is_srv = settings.MONGODB_URI.startswith('mongodb+srv://')
+        
+        # Configuración base (común para ambos)
+        client_options = {
+            'serverSelectionTimeoutMS': 10000,  # 10 segundos (más rápido para detectar errores)
+            'connectTimeoutMS': 10000,
+            'socketTimeoutMS': 45000,
+            'maxPoolSize': 50,
+            'minPoolSize': 10,
+            'retryWrites': True,
+            'retryReads': True,
+            'w': 'majority',
+        }
+        
+        # Configuración específica para mongodb+srv:// (Atlas)
+        if is_srv:
+            client_options.update({
+                'tls': True,
+                'tlsAllowInvalidCertificates': True,
+            })
+            logger.info("🔌 Connecting to MongoDB Atlas (SRV)...")
+        else:
+            # Configuración para mongodb:// (directo o local)
+            logger.info("🔌 Connecting to MongoDB (direct)...")
+        
+        try:
+            self.client = MongoClient(settings.MONGODB_URI, **client_options)
+            
+            # Test de conexión inmediato
+            self.client.admin.command('ping')
+            
+            self.database = self.client[settings.MONGODB_DB]
+            self.collection = self.database[settings.MONGODB_COLLECTION]
+            
+            logger.info(f"✅ MongoDB connected: {settings.MONGODB_DB}/{settings.MONGODB_COLLECTION}")
+            
+        except ServerSelectionTimeoutError as e:
+            logger.error(f"❌ MongoDB connection timeout: {e}")
+            logger.error("💡 Verifica: 1) Firewall, 2) DNS, 3) IP whitelist en Atlas, 4) Credenciales")
+            raise
+        except Exception as e:
+            logger.error(f"❌ MongoDB connection error: {e}")
+            raise
     
     def search_vectors(
         self,

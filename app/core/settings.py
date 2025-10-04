@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     MONGODB_COLLECTION: str = "pub_chunks"
     MONGODB_VECTOR_INDEX: str = "vector_index"  # nombre del índice vectorial
     
+    # MongoDB Connection Details (opcionales para debugging)
+    MONGO_USER: str = "admin"
+    MONGO_PASSWORD: str = "admin"
+    MONGO_HOST: str = "localhost"
+    MONGO_PORT: int = 27017
+    
     # === PostgreSQL + pgvector (opción B - comentada) ===
     # POSTGRES_USER: str = ""
     # POSTGRES_PASSWORD: str = ""

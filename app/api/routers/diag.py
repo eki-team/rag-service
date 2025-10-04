@@ -200,3 +200,162 @@ async def retrieval_audit():
     except Exception as e:
         logger.error(f"❌ Audit error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/mongo/health")
+async def mongodb_health():
+    """
+    🔍 **Health check detallado de MongoDB**
+    
+    Verifica la conexión, acceso a la base de datos, y estado del cluster.
+    
+    **Response:**
+    ```json
+    {
+      "status": "connected",
+      "connection_type": "mongodb",
+      "database": "nasakb",
+      "collection": "chunks",
+      "server_info": {
+        "version": "7.0.0",
+        "connection": "nasakb-shard-00-00.mongodb.net:27017"
+      },
+      "stats": {
+        "collections": 5,
+        "documents": 1234,
+        "indexes": 3
+      },
+      "latency_ms": 45.2
+    }
+    ```
+    """
+    try:
+        from app.db.mongo_repo import get_mongo_repo
+        from time import time
+        
+        logger.info("🔍 Checking MongoDB health...")
+        start = time()
+        
+        # Obtener repositorio
+        repo = get_mongo_repo()
+        
+        # Test 1: Ping básico
+        try:
+            ping_result = repo.client.admin.command('ping')
+            ping_ok = ping_result.get('ok') == 1
+        except Exception as e:
+            logger.error(f"❌ MongoDB ping failed: {e}")
+            return {
+                "status": "error",
+                "error": f"Connection failed: {str(e)}",
+                "connection_type": settings.VECTOR_BACKEND,
+                "database": settings.MONGODB_DB,
+                "collection": settings.MONGODB_COLLECTION,
+            }
+        
+        # Test 2: Server info
+        try:
+            server_info = repo.client.server_info()
+            version = server_info.get('version', 'unknown')
+        except Exception as e:
+            version = f"error: {e}"
+        
+        # Test 3: Obtener host conectado
+        try:
+            connection_info = repo.client.admin.command('whatsmyuri')
+            connected_host = connection_info.get('you', 'unknown')
+        except Exception as e:
+            connected_host = f"error: {e}"
+        
+        # Test 4: Database stats
+        try:
+            db = repo.client[settings.MONGODB_DB]
+            
+            # Lista de colecciones
+            collections = db.list_collection_names()
+            collections_count = len(collections)
+            
+            # Contar documentos en la colección principal
+            if settings.MONGODB_COLLECTION in collections:
+                doc_count = repo.collection.count_documents({})
+                
+                # Contar índices
+                indexes = list(repo.collection.list_indexes())
+                indexes_count = len(indexes)
+                index_names = [idx.get('name') for idx in indexes]
+            else:
+                doc_count = 0
+                indexes_count = 0
+                index_names = []
+                logger.warning(f"⚠️ Collection '{settings.MONGODB_COLLECTION}' not found")
+            
+            # Database stats generales
+            db_stats = db.command('dbStats')
+            db_size = db_stats.get('dataSize', 0)
+            
+        except Exception as e:
+            logger.error(f"❌ Error getting DB stats: {e}")
+            collections_count = 0
+            doc_count = 0
+            indexes_count = 0
+            index_names = []
+            db_size = 0
+        
+        # Test 5: Vector index status
+        vector_index_exists = False
+        try:
+            if settings.MONGODB_COLLECTION in collections:
+                indexes = list(repo.collection.list_indexes())
+                vector_index_exists = any(
+                    idx.get('name') == settings.MONGODB_VECTOR_INDEX 
+                    for idx in indexes
+                )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not check vector index: {e}")
+        
+        # Calcular latencia
+        latency_ms = round((time() - start) * 1000, 2)
+        
+        # Respuesta
+        response = {
+            "status": "connected" if ping_ok else "error",
+            "connection_type": settings.VECTOR_BACKEND,
+            "database": settings.MONGODB_DB,
+            "collection": settings.MONGODB_COLLECTION,
+            "server_info": {
+                "version": version,
+                "connected_to": connected_host,
+                "mongodb_uri": settings.MONGODB_URI.replace(
+                    f"admin:{settings.MONGO_PASSWORD}@", 
+                    "admin:***@"
+                ) if hasattr(settings, 'MONGO_PASSWORD') else "***"
+            },
+            "stats": {
+                "collections": collections_count,
+                "collections_list": collections[:10] if collections else [],  # Max 10
+                "documents_in_collection": doc_count,
+                "indexes": indexes_count,
+                "index_names": index_names,
+                "vector_index_exists": vector_index_exists,
+                "vector_index_name": settings.MONGODB_VECTOR_INDEX,
+                "database_size_bytes": db_size,
+                "database_size_mb": round(db_size / (1024 * 1024), 2)
+            },
+            "latency_ms": latency_ms,
+            "healthy": ping_ok and doc_count > 0
+        }
+        
+        logger.info(f"✅ MongoDB health check completed: {latency_ms}ms, {doc_count} docs")
+        return response
+    
+    except Exception as e:
+        logger.error(f"❌ MongoDB health check failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "connection_type": settings.VECTOR_BACKEND,
+            "database": settings.MONGODB_DB,
+            "collection": settings.MONGODB_COLLECTION,
+            "healthy": False
+        }
