@@ -120,21 +120,42 @@ class RAGPipeline:
             return data["choices"][0]["message"]["content"]
     
     def _extract_citations(self, chunks: list[Dict[str, Any]]) -> list[Citation]:
-        """Extraer citations de chunks"""
+        """Extraer citations de chunks con información de scoring"""
         citations = []
         for idx, chunk in enumerate(chunks, start=1):
             # Snippet: primeras 200 chars
             snippet = chunk.get("text", "")[:200] + "..."
             
+            # Extract scoring information
+            similarity = chunk.get("similarity", chunk.get("base_similarity"))
+            section_boost = chunk.get("section_boost", 0.0)
+            final_score = chunk.get("final_score", similarity)
+            section = chunk.get("section", "Unknown")
+            
+            # Build relevance reason
+            reason_parts = []
+            if similarity:
+                reason_parts.append(f"Vector similarity: {similarity:.3f}")
+            if section_boost > 0:
+                reason_parts.append(f"Section '{section}' boost: +{section_boost:.3f}")
+            if final_score:
+                reason_parts.append(f"Final score: {final_score:.3f}")
+            
+            relevance_reason = " | ".join(reason_parts) if reason_parts else "Selected by retrieval system"
+            
             citations.append(Citation(
                 source_id=chunk.get("source_id", f"chunk_{idx}"),
                 doi=chunk.get("doi"),
                 osdr_id=chunk.get("osdr_id"),
-                section=chunk.get("section"),
+                section=section,
                 snippet=snippet,
                 url=chunk.get("url"),
                 title=chunk.get("title"),
                 year=chunk.get("year"),
+                similarity_score=round(similarity, 4) if similarity else None,
+                section_boost=round(section_boost, 4) if section_boost else None,
+                final_score=round(final_score, 4) if final_score else None,
+                relevance_reason=relevance_reason,
             ))
         return citations
     

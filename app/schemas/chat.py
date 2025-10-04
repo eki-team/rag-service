@@ -37,6 +37,12 @@ class Citation(BaseModel):
     url: Optional[str] = None
     title: Optional[str] = None
     year: Optional[int] = None
+    
+    # Scoring and relevance information
+    similarity_score: Optional[float] = Field(None, description="Vector similarity score (0-1)")
+    section_boost: Optional[float] = Field(None, description="Section priority boost applied")
+    final_score: Optional[float] = Field(None, description="Final ranking score (similarity + boost)")
+    relevance_reason: Optional[str] = Field(None, description="Why this chunk was selected")
 
 
 class ChatRequest(BaseModel):
@@ -92,6 +98,10 @@ class ChatResponse(BaseModel):
                         "url": "https://osdr.nasa.gov/bio/repo/data/studies/GLDS-123",
                         "title": "Microgravity effects on immune response",
                         "year": 2023,
+                        "similarity_score": 0.87,
+                        "section_boost": 0.10,
+                        "final_score": 0.97,
+                        "relevance_reason": "High similarity (0.87) + Results section boost (+0.10)",
                     }
                 ],
                 "used_filters": {
