@@ -45,36 +45,60 @@ class Retriever:
             logger.warning("⚠️ No chunks retrieved from vector search")
             return []
         
-        logger.info(f"📦 Retrieved {len(chunks)} chunks before re-ranking")
+        # Log initial scores
+        if chunks:
+            initial_scores = [c.get("similarity", 0) for c in chunks]
+            logger.info(
+                f"📦 Retrieved {len(chunks)} chunks | "
+                f"Scores: max={max(initial_scores):.4f}, min={min(initial_scores):.4f}"
+            )
         
         # 2. Re-ranking por sección
+        # Boost chunks from important sections (Results, Conclusion, etc.)
         for chunk in chunks:
             section = chunk.get("section", "")
             section_score = SECTION_PRIORITY.get(section, 0)
             base_similarity = chunk.get("similarity", 0.0)
             
-            # Boost por sección: Results +0.1, Conclusion +0.05, etc.
+            # Apply section boost: Results gets highest boost
+            # section_score: Results=4, Conclusion=3, Methods=2, Intro=1, Other=0
+            # boost: 0.025 per priority point (max +0.1 for Results)
             boost = section_score * 0.025
             chunk["final_score"] = base_similarity + boost
+            
+            # Keep original similarity for reference
+            chunk["base_similarity"] = base_similarity
+            chunk["section_boost"] = boost
         
-        chunks.sort(key=lambda x: x["final_score"], reverse=True)
+        # Sort by final score (similarity + section boost)
+        chunks.sort(key=lambda x: x.get("final_score", 0), reverse=True)
         
-        # 3. Dedup por DOI (mantener el chunk con mejor score)
+        # 3. Dedup por DOI (keep best scoring chunk per paper)
         seen_dois = set()
         deduped = []
         for chunk in chunks:
             doi = chunk.get("doi")
             if doi and doi in seen_dois:
-                continue
+                continue  # Skip duplicate DOI
             if doi:
                 seen_dois.add(doi)
             deduped.append(chunk)
         
-        logger.info(f"🧹 After dedup: {len(deduped)} chunks")
+        removed_dupes = len(chunks) - len(deduped)
+        if removed_dupes > 0:
+            logger.info(f"🧹 Removed {removed_dupes} duplicate DOIs | {len(deduped)} unique chunks remain")
         
         # 4. Return top_k
         result = deduped[:top_k]
-        logger.info(f"✅ Final retrieval: {len(result)} chunks")
+        
+        # Log final results
+        if result:
+            final_scores = [r.get("final_score", 0) for r in result]
+            logger.info(
+                f"✅ Final: {len(result)} chunks | "
+                f"Scores: max={max(final_scores):.4f}, min={min(final_scores):.4f}"
+            )
+        
         return result
     
     def _filters_to_dict(self, filters: FilterFacets) -> Dict[str, Any]:

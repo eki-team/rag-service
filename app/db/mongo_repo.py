@@ -72,39 +72,64 @@ class MongoRepository:
         min_similarity: float = 0.70,
     ) -> List[Dict[str, Any]]:
         """
-        Buscar por similitud vectorial con filtros opcionales usando MongoDB Atlas Vector Search.
+        Buscar por similitud vectorial usando MongoDB Atlas Vector Search.
+        Basado en el patrón de vector_search.py que funciona correctamente.
         
         Args:
-            query_vec: Vector de embedding de la query
-            filters: Filtros facetados (organism, mission_env, etc.)
-            top_k: Número de resultados
-            min_similarity: Similitud mínima
+            query_vec: Vector de embedding de la query (1536 dims para OpenAI)
+            filters: Filtros facetados opcionales (organism, mission_env, etc.)
+            top_k: Número de resultados a retornar
+            min_similarity: Similitud mínima (score threshold)
         
         Returns:
-            Lista de chunks con metadata y score
+            Lista de chunks con metadata, text y similarity score
         """
         try:
-            # Construir pipeline de agregación con $vectorSearch
+            # Step 1: Build $vectorSearch stage (MUST be first in pipeline)
+            # numCandidates should be higher than limit for better recall
+            num_candidates = max(top_k * 10, 100)
+            
             pipeline = [
                 {
                     "$vectorSearch": {
-                        "index": settings.MONGODB_VECTOR_INDEX,
+                        "index": settings.MONGODB_VECTOR_INDEX,  # "vector_index"
                         "path": "embedding",
                         "queryVector": query_vec,
-                        "numCandidates": top_k * 10, 
-                        "limit": top_k,
-                        "similarity": "cosine",
-               }
+                        "numCandidates": num_candidates,
+                        "limit": top_k
+                    }
                 },
+                # Step 2: Add similarity score as a field
                 {
-                    "$addFields": {
+                    "$project": {
+                        "_id": 0,
+                        "source_id": 1,
+                        "title": 1,
+                        "text": 1,
+                        "section": 1,
+                        "doi": 1,
+                        "osdr_id": 1,
+                        "organism": 1,
+                        "system": 1,
+                        "mission_env": 1,
+                        "exposure": 1,
+                        "assay": 1,
+                        "tissue": 1,
+                        "year": 1,
+                        "venue": 1,
+                        "url": 1,
+                        "source_type": 1,
+                        "chunk_index": 1,
+                        "total_chunks": 1,
+                        "created_at": 1,
+                        # Get the vector search score
                         "similarity": {"$meta": "vectorSearchScore"}
                     }
                 }
             ]
             
-            # Agregar filtros con $match
-            match_conditions = {}  # Remover filtro de pk para buscar en todos los documentos
+            # Step 3: Add metadata filters (AFTER $vectorSearch)
+            match_conditions = {}
             
             if filters:
                 if "organism" in filters and filters["organism"]:
@@ -129,44 +154,41 @@ class MongoRepository:
                     year_min, year_max = filters["year_range"]
                     match_conditions["year"] = {"$gte": year_min, "$lte": year_max}
             
-            # Agregar $match después del $vectorSearch
-            pipeline.insert(1, {"$match": match_conditions})
+            # Add $match stage if we have filters
+            if match_conditions:
+                pipeline.append({"$match": match_conditions})
             
-            # Agregar proyección para incluir solo campos necesarios
-            pipeline.append({
-                "$project": {
-                    "_id": 0,
-                    "source_id": 1,
-                    "title": 1,
-                    "text": 1,
-                    "section": 1,
-                    "doi": 1,
-                    "osdr_id": 1,
-                    "organism": 1,
-                    "system": 1,
-                    "mission_env": 1,
-                    "exposure": 1,
-                    "assay": 1,
-                    "tissue": 1,
-                    "year": 1,
-                    "venue": 1,
-                    "url": 1,
-                    "source_type": 1,
-                    "similarity": 1,
-                }
-            })
+            # Step 4: Filter by minimum similarity score
+            if min_similarity > 0:
+                pipeline.append({
+                    "$match": {
+                        "similarity": {"$gte": min_similarity}
+                    }
+                })
             
-            # Ejecutar pipeline
+            # Step 5: Execute pipeline
+            logger.info(f"🔍 Vector search: top_k={top_k}, numCandidates={num_candidates}, min_sim={min_similarity}")
+            
             results = list(self.collection.aggregate(pipeline))
             
-            # Filtrar por min_similarity
-            filtered_results = [doc for doc in results if doc.get("similarity", 0) >= min_similarity]
+            # Log results
+            if results:
+                scores = [r.get("similarity", 0) for r in results]
+                logger.info(
+                    f"📊 Found {len(results)} chunks | "
+                    f"Scores: max={max(scores):.4f}, min={min(scores):.4f}, avg={sum(scores)/len(scores):.4f}"
+                )
+            else:
+                logger.warning(f"⚠️ No results found. Check:")
+                logger.warning(f"   1. Vector index 'vector_index' exists in Atlas")
+                logger.warning(f"   2. Documents have 'embedding' field with {len(query_vec)} dims")
+                logger.warning(f"   3. min_similarity={min_similarity} might be too high")
             
-            logger.info(f"📊 MongoDB search: {len(filtered_results)}/{len(results)} chunks above threshold {min_similarity}")
-            return filtered_results
+            return results
         
         except PyMongoError as e:
-            logger.error(f"❌ MongoDB search error: {e}")
+            logger.error(f"❌ MongoDB vector search error: {type(e).__name__}: {e}")
+            logger.error(f"💡 If index error: Create 'vector_index' in MongoDB Atlas (see CREAR_INDICE_VECTORIAL.md)")
             return []
     
     def get_by_ids(self, ids: List[str]) -> List[Dict[str, Any]]:
