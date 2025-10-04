@@ -7,11 +7,12 @@
 
 ## 📋 Features
 
-- ✅ **Vector search** con MongoDB Atlas (o pgvector como alternativa)
+- ✅ **Vector search** con MongoDB Atlas (384 dims, cosine similarity)
+- ✅ **Local embeddings** con all-MiniLM-L6-v2 (~14K oraciones/seg en CPU)
 - ✅ **Filtros facetados**: organism, mission environment, exposure type, tissue, year
 - ✅ **Grounding con citas explícitas**: todas las afirmaciones incluyen `[N]` citations
 - ✅ **Priorización por sección**: Results > Conclusion > Methods > Introduction
-- ✅ **OpenAI embeddings + GPT-4o-mini** para síntesis
+- ✅ **GPT-4o-mini** para síntesis (OpenAI)
 - ✅ **Endpoints de diagnóstico**: health, embeddings, retrieval, audit
 
 ---

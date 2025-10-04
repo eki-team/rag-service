@@ -49,6 +49,7 @@ class MongoRepository:
                         "queryVector": query_vec,
                         "numCandidates": top_k * 10,  # Candidatos para mejorar recall
                         "limit": top_k,
+                        "similarity": "cosine",  # Similitud de coseno
                     }
                 },
                 {

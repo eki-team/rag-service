@@ -8,7 +8,7 @@ Esta guía explica cómo configurar **MongoDB Atlas Vector Search** para el serv
 
 - Cuenta en [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) (tier gratuito disponible)
 - Python 3.11+
-- Embeddings OpenAI (1536 dimensiones)
+- Embeddings all-MiniLM-L6-v2 (384 dimensiones, local)
 
 ---
 
@@ -44,7 +44,7 @@ db.createCollection("pub_chunks")
     "fields": {
       "embedding": {
         "type": "knnVector",
-        "dimensions": 1536,
+        "dimensions": 384,
         "similarity": "cosine"
       },
       "organism": {
@@ -84,7 +84,7 @@ db.pub_chunks.createSearchIndex(
       "fields": {
         "embedding": {
           "type": "knnVector",
-          "dimensions": 1536,
+          "dimensions": 384,
           "similarity": "cosine"
         },
         "organism": { "type": "string" },
@@ -132,7 +132,7 @@ doc = {
     "exposure": "microgravity",
     "section": "Results",
     "text": "This is a test chunk about microgravity effects on mice.",
-    "embedding": [0.1] * 1536,  # Vector de 1536 dimensiones
+    "embedding": [0.1] * 384,  # Vector de 384 dimensiones (all-MiniLM-L6-v2)
 }
 
 collection.insert_one(doc)
@@ -169,9 +169,10 @@ pipeline = [
         "$vectorSearch": {
             "index": "vector_index",
             "path": "embedding",
-            "queryVector": [0.1] * 1536,  # Vector de prueba
+            "queryVector": [0.1] * 384,  # Vector de prueba (384 dims)
             "numCandidates": 50,
-            "limit": 5
+            "limit": 5,
+            "similarity": "cosine"
         }
     },
     {
@@ -210,9 +211,10 @@ db.pub_chunks.createIndex({ "source_id": 1 }, { unique: true })
 - Verifica el nombre del índice en Atlas UI
 
 ### Error: "numDimensions mismatch"
+- `all-MiniLM-L6-v2` = 384 dimensiones
 - OpenAI `text-embedding-3-small` = 1536 dimensiones
 - OpenAI `text-embedding-3-large` = 3072 dimensiones
-- Asegúrate que el índice coincida con tu modelo
+- Asegúrate que el índice coincida con tu modelo (384 para este proyecto)
 
 ### Performance lento
 - Aumenta `numCandidates` en el pipeline (default: top_k * 10)

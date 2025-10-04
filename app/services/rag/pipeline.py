@@ -10,6 +10,7 @@ from app.services.rag.repository import get_repository_service
 from app.services.rag.retriever import Retriever
 from app.services.rag.context_builder import ContextBuilder
 from app.services.rag.prompts.free_nasa import SYNTHESIS_PROMPT
+from app.services.embeddings.sentence_transformer import get_embeddings_service
 from app.core.settings import settings
 from collections import Counter
 import logging
@@ -24,6 +25,7 @@ class RAGPipeline:
         self.repo_service = get_repository_service()
         self.retriever = Retriever(self.repo_service.repo)
         self.context_builder = ContextBuilder(max_tokens=3000)
+        self.embeddings = get_embeddings_service()
     
     async def answer(
         self,
@@ -43,9 +45,9 @@ class RAGPipeline:
         """
         start_time = time()
         
-        # 1. Embedding
+        # 1. Embedding (síncrono, muy rápido en CPU)
         logger.info(f"🔍 Query: {query[:100]}...")
-        query_vec = await self._get_embedding(query)
+        query_vec = self._get_embedding(query)
         
         # 2. Retrieval
         chunks = self.retriever.retrieve(query_vec, filters, top_k)
@@ -83,23 +85,13 @@ class RAGPipeline:
             session_id=session_id,
         )
     
-    async def _get_embedding(self, text: str) -> list[float]:
-        """Generar embedding con OpenAI"""
-        url = "https://api.openai.com/v1/embeddings"
-        headers = {
-            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "input": text,
-            "model": settings.OPENAI_EMBED_MODEL,
-        }
-        
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            return data["data"][0]["embedding"]
+    def _get_embedding(self, text: str) -> list[float]:
+        """
+        Generar embedding usando sentence-transformers (all-MiniLM-L6-v2).
+        Retorna vector de 384 dimensiones con similitud de coseno.
+        Muy rápido: ~14,000 oraciones/seg en CPU.
+        """
+        return self.embeddings.encode_query(text)
     
     async def _synthesize(self, query: str, context: str) -> str:
         """Síntesis con OpenAI chat"""

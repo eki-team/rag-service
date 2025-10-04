@@ -9,12 +9,16 @@ from typing import Literal
 class Settings(BaseSettings):
     """Settings para NASA RAG - Vector store + OpenAI"""
     
-    # === OpenAI Config ===
+    # === OpenAI Config (solo para LLM, NO embeddings) ===
     OPENAI_API_KEY: str
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
-    OPENAI_EMBED_MODEL: str = "text-embedding-3-small"
     OPENAI_MAX_TOKENS: int = 4096
     OPENAI_TEMPERATURE: float = 0.2
+    
+    # === Embeddings Config (sentence-transformers) ===
+    EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
+    EMBEDDING_DIMENSIONS: int = 384
+    EMBEDDING_BATCH_SIZE: int = 32
     
     # === Vector Backend ===
     VECTOR_BACKEND: Literal["mongodb", "pgvector"] = "mongodb"
