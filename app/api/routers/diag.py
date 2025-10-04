@@ -40,7 +40,7 @@ async def health():
             vector_backend=settings.VECTOR_BACKEND,
             models={
                 "chat": settings.OPENAI_CHAT_MODEL,
-                "embed": f"{settings.EMBEDDING_MODEL} (local, {settings.EMBEDDING_DIMENSIONS}D)",
+                "embed": f"{settings.EMBEDDING_MODEL} (OpenAI, {settings.EMBEDDING_DIMENSIONS}D)",
             },
             nasa_mode=settings.NASA_MODE,
             guided_enabled=settings.NASA_GUIDED_ENABLED,
@@ -59,9 +59,9 @@ async def health():
 
 @router.post("/emb", response_model=EmbeddingResponse)
 async def get_embedding(request: EmbeddingRequest):
-    """Generar embedding de un texto usando sentence-transformers (debug)"""
+    """Generar embedding de un texto usando OpenAI (debug)"""
     try:
-        from app.services.embeddings.sentence_transformer import get_embeddings_service
+        from app.services.embeddings import get_embeddings_service
         
         emb_service = get_embeddings_service()
         embedding = emb_service.encode_query(request.text)

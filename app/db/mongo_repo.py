@@ -222,33 +222,27 @@ class MongoRepository:
     def count_documents(self, filters: Optional[Dict[str, Any]] = None) -> int:
         """Contar documentos únicos con filtros opcionales"""
         try:
-            match_query = {"pk": settings.NASA_DEFAULT_ORG}
+            match_query = {}
             
             if filters:
-                if "organism" in filters and filters["organism"]:
-                    match_query["organism"] = {"$in": filters["organism"]}
-                if "mission_env" in filters and filters["mission_env"]:
-                    match_query["mission_env"] = {"$in": filters["mission_env"]}
-                if "exposure" in filters and filters["exposure"]:
-                    match_query["exposure"] = {"$in": filters["exposure"]}
-                if "system" in filters and filters["system"]:
-                    match_query["system"] = {"$in": filters["system"]}
-                if "tissue" in filters and filters["tissue"]:
-                    match_query["tissue"] = {"$in": filters["tissue"]}
-                if "assay" in filters and filters["assay"]:
-                    match_query["assay"] = {"$in": filters["assay"]}
-                if "year_min" in filters and filters["year_min"]:
-                    match_query["year"] = match_query.get("year", {})
-                    match_query["year"]["$gte"] = filters["year_min"]
-                if "year_max" in filters and filters["year_max"]:
-                    match_query["year"] = match_query.get("year", {})
-                    match_query["year"]["$lte"] = filters["year_max"]
+                if "category" in filters and filters["category"]:
+                    match_query["metadata.category"] = filters["category"]
+                if "tags" in filters and filters["tags"]:
+                    match_query["metadata.tags"] = {"$in": filters["tags"]}
+                if "source_type" in filters and filters["source_type"]:
+                    match_query["source_type"] = filters["source_type"]
+                if "pmc_id" in filters and filters["pmc_id"]:
+                    match_query["metadata.article_metadata.pmc_id"] = filters["pmc_id"]
                 if "search_text" in filters and filters["search_text"]:
-                    match_query["$text"] = {"$search": filters["search_text"]}
+                    match_query["$or"] = [
+                        {"text": {"$regex": filters["search_text"], "$options": "i"}},
+                        {"metadata.article_metadata.title": {"$regex": filters["search_text"], "$options": "i"}},
+                        {"metadata.tags": {"$regex": filters["search_text"], "$options": "i"}}
+                    ]
             
             pipeline = [
-                {"$match": match_query},
-                {"$group": {"_id": "$doi"}},
+                {"$match": match_query} if match_query else {"$match": {}},
+                {"$group": {"_id": "$pk"}},
                 {"$count": "total"}
             ]
             
@@ -267,70 +261,53 @@ class MongoRepository:
     ) -> List[Dict[str, Any]]:
         """Buscar documentos con filtros (sin búsqueda vectorial)"""
         try:
-            match_query = {"pk": settings.NASA_DEFAULT_ORG}
+            match_query = {}
             
-            if "organism" in filters and filters["organism"]:
-                match_query["organism"] = {"$in": filters["organism"]}
-            if "mission_env" in filters and filters["mission_env"]:
-                match_query["mission_env"] = {"$in": filters["mission_env"]}
-            if "exposure" in filters and filters["exposure"]:
-                match_query["exposure"] = {"$in": filters["exposure"]}
-            if "system" in filters and filters["system"]:
-                match_query["system"] = {"$in": filters["system"]}
-            if "tissue" in filters and filters["tissue"]:
-                match_query["tissue"] = {"$in": filters["tissue"]}
-            if "assay" in filters and filters["assay"]:
-                match_query["assay"] = {"$in": filters["assay"]}
-            if "year_min" in filters and filters["year_min"]:
-                match_query["year"] = match_query.get("year", {})
-                match_query["year"]["$gte"] = filters["year_min"]
-            if "year_max" in filters and filters["year_max"]:
-                match_query["year"] = match_query.get("year", {})
-                match_query["year"]["$lte"] = filters["year_max"]
+            if "category" in filters and filters["category"]:
+                match_query["metadata.category"] = filters["category"]
+            if "tags" in filters and filters["tags"]:
+                match_query["metadata.tags"] = {"$in": filters["tags"]}
+            if "source_type" in filters and filters["source_type"]:
+                match_query["source_type"] = filters["source_type"]
+            if "pmc_id" in filters and filters["pmc_id"]:
+                match_query["metadata.article_metadata.pmc_id"] = filters["pmc_id"]
             if "search_text" in filters and filters["search_text"]:
-                # Búsqueda de texto en título o contenido
+                # Búsqueda de texto en título, contenido o tags
                 match_query["$or"] = [
-                    {"title": {"$regex": filters["search_text"], "$options": "i"}},
-                    {"text": {"$regex": filters["search_text"], "$options": "i"}}
+                    {"text": {"$regex": filters["search_text"], "$options": "i"}},
+                    {"metadata.article_metadata.title": {"$regex": filters["search_text"], "$options": "i"}},
+                    {"metadata.tags": {"$regex": filters["search_text"], "$options": "i"}}
                 ]
             
             pipeline = [
-                {"$match": match_query},
+                {"$match": match_query} if match_query else {"$match": {}},
                 {
                     "$group": {
-                        "_id": "$doi",
-                        "source_id": {"$first": "$source_id"},
-                        "title": {"$first": "$title"},
-                        "year": {"$first": "$year"},
-                        "doi": {"$first": "$doi"},
-                        "osdr_id": {"$first": "$osdr_id"},
-                        "organism": {"$first": "$organism"},
-                        "mission_env": {"$first": "$mission_env"},
-                        "exposure": {"$first": "$exposure"},
-                        "system": {"$first": "$system"},
-                        "tissue": {"$first": "$tissue"},
-                        "assay": {"$first": "$assay"},
-                        "chunk_count": {"$sum": 1}
+                        "_id": "$pk",
+                        "pk": {"$first": "$pk"},
+                        "title": {"$first": "$metadata.article_metadata.title"},
+                        "source_type": {"$first": "$source_type"},
+                        "source_url": {"$first": "$source_url"},
+                        "category": {"$first": "$metadata.category"},
+                        "tags": {"$first": "$metadata.tags"},
+                        "total_chunks": {"$sum": 1},
+                        "article_metadata": {"$first": "$metadata.article_metadata"}
                     }
                 },
-                {"$sort": {"year": -1}},
+                {"$sort": {"pk": 1}},
                 {"$skip": skip},
                 {"$limit": limit},
                 {
                     "$project": {
                         "_id": 0,
-                        "source_id": 1,
+                        "pk": 1,
                         "title": 1,
-                        "year": 1,
-                        "doi": 1,
-                        "osdr_id": 1,
-                        "organism": 1,
-                        "mission_env": 1,
-                        "exposure": 1,
-                        "system": 1,
-                        "tissue": 1,
-                        "assay": 1,
-                        "chunk_count": 1
+                        "source_type": 1,
+                        "source_url": 1,
+                        "category": 1,
+                        "tags": 1,
+                        "total_chunks": 1,
+                        "article_metadata": 1
                     }
                 }
             ]
@@ -342,31 +319,32 @@ class MongoRepository:
             logger.error(f"❌ search_documents_by_filters error: {e}")
             return []
     
-    def get_document_by_id(self, source_id: str) -> Optional[Dict[str, Any]]:
+    def get_document_by_id(self, pk: str) -> Optional[Dict[str, Any]]:
         """Obtener todos los chunks de un documento específico"""
         try:
             # Buscar todos los chunks del documento
             chunks = list(self.collection.find(
-                {"source_id": {"$regex": f"^{source_id}"}, "pk": settings.NASA_DEFAULT_ORG},
+                {"pk": pk},
                 {"_id": 0, "embedding": 0}  # Excluir _id y embedding
             ).sort("chunk_index", 1))
             
             if not chunks:
                 return None
             
+            first_chunk = chunks[0]
+            metadata = first_chunk.get("metadata", {})
+            article_metadata = metadata.get("article_metadata", {})
+            
             return {
                 "metadata": {
-                    "source_id": chunks[0].get("source_id"),
-                    "title": chunks[0].get("title"),
-                    "year": chunks[0].get("year"),
-                    "doi": chunks[0].get("doi"),
-                    "osdr_id": chunks[0].get("osdr_id"),
-                    "organism": chunks[0].get("organism"),
-                    "mission_env": chunks[0].get("mission_env"),
-                    "exposure": chunks[0].get("exposure"),
-                    "system": chunks[0].get("system"),
-                    "tissue": chunks[0].get("tissue"),
-                    "assay": chunks[0].get("assay"),
+                    "pk": first_chunk.get("pk"),
+                    "title": article_metadata.get("title", ""),
+                    "source_type": first_chunk.get("source_type"),
+                    "source_url": first_chunk.get("source_url"),
+                    "category": metadata.get("category"),
+                    "tags": metadata.get("tags", []),
+                    "total_chunks": len(chunks),
+                    "article_metadata": article_metadata
                 },
                 "chunks": chunks,
                 "total_chunks": len(chunks)
@@ -378,20 +356,49 @@ class MongoRepository:
     def get_filter_values(self) -> Dict[str, List[Any]]:
         """Obtener todos los valores únicos para cada filtro"""
         try:
-            filter_fields = ["organism", "mission_env", "exposure", "system", "tissue", "assay", "year"]
             result = {}
             
-            for field in filter_fields:
-                pipeline = [
-                    {"$match": {"pk": settings.NASA_DEFAULT_ORG, field: {"$exists": True, "$ne": None}}},
-                    {"$group": {"_id": f"${field}"}},
-                    {"$sort": {"_id": 1}}
-                ]
-                
-                values = list(self.collection.aggregate(pipeline))
-                result[field] = [item["_id"] for item in values if item["_id"]]
+            # Obtener categorías únicas
+            categories_pipeline = [
+                {"$match": {"metadata.category": {"$exists": True, "$ne": None}}},
+                {"$group": {"_id": "$metadata.category"}},
+                {"$sort": {"_id": 1}}
+            ]
+            categories = list(self.collection.aggregate(categories_pipeline))
+            result["categories"] = [item["_id"] for item in categories if item["_id"]]
             
-            logger.info(f"🎯 Retrieved filter values for {len(filter_fields)} fields")
+            # Obtener source_types únicos
+            source_types_pipeline = [
+                {"$match": {"source_type": {"$exists": True, "$ne": None}}},
+                {"$group": {"_id": "$source_type"}},
+                {"$sort": {"_id": 1}}
+            ]
+            source_types = list(self.collection.aggregate(source_types_pipeline))
+            result["source_types"] = [item["_id"] for item in source_types if item["_id"]]
+            
+            # Obtener top 50 tags más comunes
+            tags_pipeline = [
+                {"$match": {"metadata.tags": {"$exists": True, "$ne": []}}},
+                {"$unwind": "$metadata.tags"},
+                {"$group": {"_id": "$metadata.tags", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 50},
+                {"$project": {"_id": 1}}
+            ]
+            tags = list(self.collection.aggregate(tags_pipeline))
+            result["tags"] = [item["_id"] for item in tags if item["_id"]]
+            
+            # Contar documentos y chunks totales
+            total_docs_pipeline = [
+                {"$group": {"_id": "$pk"}},
+                {"$count": "total"}
+            ]
+            total_docs_result = list(self.collection.aggregate(total_docs_pipeline))
+            result["total_documents"] = total_docs_result[0]["total"] if total_docs_result else 0
+            
+            result["total_chunks"] = self.collection.count_documents({})
+            
+            logger.info(f"🎯 Retrieved filter values: {len(result['categories'])} categories, {len(result['tags'])} tags")
             return result
         except PyMongoError as e:
             logger.error(f"❌ get_filter_values error: {e}")

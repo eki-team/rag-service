@@ -1,42 +1,48 @@
 """
-Schemas para endpoints del frontend
+Schemas para endpoints del frontend - Adaptados a la estructura real de MongoDB
 """
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+from datetime import datetime
+
+
+class ArticleMetadata(BaseModel):
+    """Metadatos del artículo desde metadata.article_metadata"""
+    url: Optional[str] = None
+    title: str
+    authors: List[str] = []
+    scraped_at: Optional[str] = None
+    pmc_id: Optional[str] = None
+    doi: Optional[str] = None
+    statistics: Optional[Dict[str, Any]] = None
 
 
 class DocumentMetadata(BaseModel):
     """Metadatos de un documento/paper"""
-    source_id: str
+    pk: str  # ID del documento (ej: mice-in-bion-m-1-space-mission)
     title: str
-    year: Optional[int] = None
-    doi: Optional[str] = None
-    osdr_id: Optional[str] = None
-    organism: Optional[str] = None
-    mission_env: Optional[str] = None
-    exposure: Optional[str] = None
-    system: Optional[str] = None
-    tissue: Optional[str] = None
-    assay: Optional[str] = None
+    source_type: Optional[str] = None  # article, etc
+    source_url: Optional[str] = None
+    category: Optional[str] = None  # space, etc
+    tags: List[str] = []
+    total_chunks: int
+    article_metadata: Optional[ArticleMetadata] = None
 
 
 class DocumentChunk(BaseModel):
     """Chunk completo con metadatos"""
-    source_id: str
     pk: str
-    title: str
-    year: Optional[int] = None
-    doi: Optional[str] = None
-    osdr_id: Optional[str] = None
-    organism: Optional[str] = None
-    mission_env: Optional[str] = None
-    exposure: Optional[str] = None
-    system: Optional[str] = None
-    tissue: Optional[str] = None
-    assay: Optional[str] = None
-    section: str
     text: str
-    chunk_index: Optional[int] = None
+    source_type: Optional[str] = None
+    source_url: Optional[str] = None
+    category: Optional[str] = None
+    tags: List[str] = []
+    chunk_index: int
+    total_chunks: int
+    char_count: Optional[int] = None
+    word_count: Optional[int] = None
+    sentences_count: Optional[int] = None
+    article_metadata: Optional[ArticleMetadata] = None
 
 
 class DocumentListResponse(BaseModel):
@@ -53,26 +59,20 @@ class ChunksListResponse(BaseModel):
 
 class SearchFilters(BaseModel):
     """Filtros para búsqueda de documentos"""
-    organism: Optional[List[str]] = None
-    mission_env: Optional[List[str]] = None
-    exposure: Optional[List[str]] = None
-    system: Optional[List[str]] = None
-    tissue: Optional[List[str]] = None
-    assay: Optional[List[str]] = None
-    year_min: Optional[int] = None
-    year_max: Optional[int] = None
-    search_text: Optional[str] = None
+    category: Optional[str] = None  # space, biology, etc
+    tags: Optional[List[str]] = None  # Lista de tags para filtrar
+    search_text: Optional[str] = None  # Búsqueda en title, text, tags
+    pmc_id: Optional[str] = None  # ID de PubMed Central
+    source_type: Optional[str] = None  # article, etc
 
 
 class FilterValuesResponse(BaseModel):
     """Valores disponibles para cada filtro"""
-    organisms: List[str]
-    mission_envs: List[str]
-    exposures: List[str]
-    systems: List[str]
-    tissues: List[str]
-    assays: List[str]
-    years: List[int]
+    categories: List[str]
+    tags: List[str]  # Top 50 tags más comunes
+    source_types: List[str]
+    total_documents: int
+    total_chunks: int
 
 
 class DocumentDetailResponse(BaseModel):

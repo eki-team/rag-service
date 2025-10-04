@@ -1,5 +1,5 @@
 """
-Frontend API Router
+Frontend API Router - Adaptado a estructura real de MongoDB
 Endpoints para operaciones del frontend (listado, búsqueda, filtrado)
 independientes del chatbot RAG.
 """
@@ -14,7 +14,8 @@ from app.schemas.front import (
     FilterValuesResponse,
     DocumentDetailResponse,
     DocumentMetadata,
-    DocumentChunk
+    DocumentChunk,
+    ArticleMetadata
 )
 from app.db.mongo_repo import get_mongo_repo
 
@@ -44,13 +45,13 @@ async def list_documents(
       "total": 150,
       "documents": [
         {
-          "source_id": "GLDS-123_chunk_1",
-          "title": "Effects of microgravity on immune response",
-          "year": 2023,
-          "doi": "10.1038/...",
-          "organism": "Mus musculus",
-          "mission_env": "ISS",
-          ...
+          "pk": "mice-in-bion-m-1-space-mission",
+          "title": "Mice in Bion-M 1 Space Mission",
+          "source_type": "article",
+          "source_url": "https://...",
+          "category": "space",
+          "tags": ["mice", "space", "mission"],
+          "total_chunks": 55
         }
       ]
     }
@@ -64,22 +65,31 @@ async def list_documents(
         total = repo.count_documents()
         
         # Convertir a schema
-        doc_list = [
-            DocumentMetadata(
-                source_id=doc.get("source_id", ""),
+        doc_list = []
+        for doc in documents:
+            article_meta = doc.get("article_metadata")
+            article_metadata_obj = None
+            if article_meta:
+                article_metadata_obj = ArticleMetadata(
+                    url=article_meta.get("url"),
+                    title=article_meta.get("title", ""),
+                    authors=article_meta.get("authors", []),
+                    scraped_at=article_meta.get("scraped_at"),
+                    pmc_id=article_meta.get("pmc_id"),
+                    doi=article_meta.get("doi"),
+                    statistics=article_meta.get("statistics")
+                )
+            
+            doc_list.append(DocumentMetadata(
+                pk=doc.get("pk", ""),
                 title=doc.get("title", ""),
-                year=doc.get("year"),
-                doi=doc.get("doi"),
-                osdr_id=doc.get("osdr_id"),
-                organism=doc.get("organism"),
-                mission_env=doc.get("mission_env"),
-                exposure=doc.get("exposure"),
-                system=doc.get("system"),
-                tissue=doc.get("tissue"),
-                assay=doc.get("assay")
-            )
-            for doc in documents
-        ]
+                source_type=doc.get("source_type"),
+                source_url=doc.get("source_url"),
+                category=doc.get("category"),
+                tags=doc.get("tags", []),
+                total_chunks=doc.get("total_chunks", 0),
+                article_metadata=article_metadata_obj
+            ))
         
         return DocumentListResponse(total=total, documents=doc_list)
         
@@ -103,53 +113,57 @@ async def search_documents(
     **Body ejemplo:**
     ```json
     {
-      "organism": ["Mus musculus", "Homo sapiens"],
-      "mission_env": ["ISS"],
-      "year_min": 2020,
-      "year_max": 2024,
-      "search_text": "immune response"
+      "category": "space",
+      "tags": ["mice", "mission"],
+      "search_text": "microgravity"
     }
     ```
     
     **Filtros disponibles:**
-    - `organism`: Lista de organismos
-    - `mission_env`: Lista de entornos de misión
-    - `exposure`: Lista de tipos de exposición
-    - `system`: Lista de sistemas biológicos
-    - `tissue`: Lista de tejidos
-    - `assay`: Lista de tipos de ensayo
-    - `year_min`, `year_max`: Rango de años
-    - `search_text`: Búsqueda de texto en título/contenido
+    - `category`: Categoría del documento (space, biology, etc)
+    - `tags`: Lista de tags para filtrar
+    - `search_text`: Búsqueda de texto en título/contenido/tags
+    - `pmc_id`: ID de PubMed Central
+    - `source_type`: Tipo de fuente (article, etc)
     """
     try:
-        logger.info(f"🔍 Searching documents with filters: {filters.dict(exclude_none=True)}")
+        logger.info(f"🔍 Searching documents with filters: {filters.model_dump(exclude_none=True)}")
         
         repo = get_mongo_repo()
         
         # Convertir filtros a dict
-        filter_dict = filters.dict(exclude_none=True)
+        filter_dict = filters.model_dump(exclude_none=True)
         
         # Buscar documentos
         documents = repo.search_documents_by_filters(filter_dict, skip=skip, limit=limit)
         total = repo.count_documents(filter_dict)
         
         # Convertir a schema
-        doc_list = [
-            DocumentMetadata(
-                source_id=doc.get("source_id", ""),
+        doc_list = []
+        for doc in documents:
+            article_meta = doc.get("article_metadata")
+            article_metadata_obj = None
+            if article_meta:
+                article_metadata_obj = ArticleMetadata(
+                    url=article_meta.get("url"),
+                    title=article_meta.get("title", ""),
+                    authors=article_meta.get("authors", []),
+                    scraped_at=article_meta.get("scraped_at"),
+                    pmc_id=article_meta.get("pmc_id"),
+                    doi=article_meta.get("doi"),
+                    statistics=article_meta.get("statistics")
+                )
+            
+            doc_list.append(DocumentMetadata(
+                pk=doc.get("pk", ""),
                 title=doc.get("title", ""),
-                year=doc.get("year"),
-                doi=doc.get("doi"),
-                osdr_id=doc.get("osdr_id"),
-                organism=doc.get("organism"),
-                mission_env=doc.get("mission_env"),
-                exposure=doc.get("exposure"),
-                system=doc.get("system"),
-                tissue=doc.get("tissue"),
-                assay=doc.get("assay")
-            )
-            for doc in documents
-        ]
+                source_type=doc.get("source_type"),
+                source_url=doc.get("source_url"),
+                category=doc.get("category"),
+                tags=doc.get("tags", []),
+                total_chunks=doc.get("total_chunks", 0),
+                article_metadata=article_metadata_obj
+            ))
         
         return DocumentListResponse(total=total, documents=doc_list)
         
@@ -158,78 +172,111 @@ async def search_documents(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/documents/{source_id}", response_model=DocumentDetailResponse)
-async def get_document_detail(source_id: str):
+@router.get("/documents/{pk}", response_model=DocumentDetailResponse)
+async def get_document_detail(pk: str):
     """
     📖 **Obtener detalle completo de un documento**
     
-    Retorna todos los chunks de un documento específico con sus metadatos.
-    Útil para visualizar el contenido completo de un paper.
+    Retorna todos los chunks de un documento específico con metadata completa.
     
     **Ejemplo:**
     ```
-    GET /api/front/documents/GLDS-123
+    GET /api/front/documents/mice-in-bion-m-1-space-mission
     ```
     
     **Respuesta:**
     ```json
     {
       "metadata": {
-        "source_id": "GLDS-123_chunk_1",
-        "title": "Effects of microgravity...",
-        "year": 2023,
+        "pk": "mice-in-bion-m-1-space-mission",
+        "title": "Mice in Bion-M 1 Space Mission",
+        "total_chunks": 55,
         ...
       },
       "chunks": [
         {
-          "source_id": "GLDS-123_chunk_1",
-          "section": "Introduction",
-          "text": "...",
+          "pk": "mice-in-bion-m-1-space-mission",
+          "text": "Title: Mice in Bion-M 1 Space Mission...",
+          "chunk_index": 0,
+          "total_chunks": 55,
           ...
-        },
-        ...
+        }
       ],
-      "total_chunks": 25
+      "total_chunks": 55
     }
     ```
     """
     try:
-        logger.info(f"📖 Getting document detail: {source_id}")
+        logger.info(f"📖 Getting document detail: pk={pk}")
         
         repo = get_mongo_repo()
-        doc_data = repo.get_document_by_id(source_id)
+        document = repo.get_document_by_id(pk)
         
-        if not doc_data:
-            raise HTTPException(status_code=404, detail=f"Document {source_id} not found")
+        if not document:
+            raise HTTPException(status_code=404, detail=f"Document {pk} not found")
         
-        # Convertir a schema
-        metadata = DocumentMetadata(**doc_data["metadata"])
-        
-        chunks = [
-            DocumentChunk(
-                source_id=chunk.get("source_id", ""),
-                pk=chunk.get("pk", ""),
-                title=chunk.get("title", ""),
-                year=chunk.get("year"),
-                doi=chunk.get("doi"),
-                osdr_id=chunk.get("osdr_id"),
-                organism=chunk.get("organism"),
-                mission_env=chunk.get("mission_env"),
-                exposure=chunk.get("exposure"),
-                system=chunk.get("system"),
-                tissue=chunk.get("tissue"),
-                assay=chunk.get("assay"),
-                section=chunk.get("section", ""),
-                text=chunk.get("text", ""),
-                chunk_index=chunk.get("chunk_index")
+        # Convertir metadata
+        meta = document["metadata"]
+        article_meta = meta.get("article_metadata")
+        article_metadata_obj = None
+        if article_meta:
+            article_metadata_obj = ArticleMetadata(
+                url=article_meta.get("url"),
+                title=article_meta.get("title", ""),
+                authors=article_meta.get("authors", []),
+                scraped_at=article_meta.get("scraped_at"),
+                pmc_id=article_meta.get("pmc_id"),
+                doi=article_meta.get("doi"),
+                statistics=article_meta.get("statistics")
             )
-            for chunk in doc_data["chunks"]
-        ]
+        
+        metadata_obj = DocumentMetadata(
+            pk=meta.get("pk", ""),
+            title=meta.get("title", ""),
+            source_type=meta.get("source_type"),
+            source_url=meta.get("source_url"),
+            category=meta.get("category"),
+            tags=meta.get("tags", []),
+            total_chunks=meta.get("total_chunks", 0),
+            article_metadata=article_metadata_obj
+        )
+        
+        # Convertir chunks
+        chunks_list = []
+        for chunk in document["chunks"]:
+            chunk_meta = chunk.get("metadata", {})
+            chunk_article_meta = chunk_meta.get("article_metadata")
+            chunk_article_metadata_obj = None
+            if chunk_article_meta:
+                chunk_article_metadata_obj = ArticleMetadata(
+                    url=chunk_article_meta.get("url"),
+                    title=chunk_article_meta.get("title", ""),
+                    authors=chunk_article_meta.get("authors", []),
+                    scraped_at=chunk_article_meta.get("scraped_at"),
+                    pmc_id=chunk_article_meta.get("pmc_id"),
+                    doi=chunk_article_meta.get("doi"),
+                    statistics=chunk_article_meta.get("statistics")
+                )
+            
+            chunks_list.append(DocumentChunk(
+                pk=chunk.get("pk", ""),
+                text=chunk.get("text", ""),
+                source_type=chunk.get("source_type"),
+                source_url=chunk.get("source_url"),
+                category=chunk_meta.get("category"),
+                tags=chunk_meta.get("tags", []),
+                chunk_index=chunk.get("chunk_index", 0),
+                total_chunks=chunk.get("total_chunks", 0),
+                char_count=chunk_meta.get("char_count"),
+                word_count=chunk_meta.get("word_count"),
+                sentences_count=chunk_meta.get("sentences_count"),
+                article_metadata=chunk_article_metadata_obj
+            ))
         
         return DocumentDetailResponse(
-            metadata=metadata,
-            chunks=chunks,
-            total_chunks=doc_data["total_chunks"]
+            metadata=metadata_obj,
+            chunks=chunks_list,
+            total_chunks=document["total_chunks"]
         )
         
     except HTTPException:
@@ -242,21 +289,24 @@ async def get_document_detail(source_id: str):
 @router.get("/filters", response_model=FilterValuesResponse)
 async def get_filter_values():
     """
-    🎯 **Obtener valores disponibles para todos los filtros**
+    🎯 **Obtener valores disponibles para filtros**
     
-    Retorna listas de valores únicos para cada campo filtrable.
-    Útil para poblar dropdowns/selects en el frontend.
+    Retorna todos los valores únicos para cada filtro disponible.
+    Útil para poblar dropdowns y selectores en el frontend.
+    
+    **Ejemplo:**
+    ```
+    GET /api/front/filters
+    ```
     
     **Respuesta:**
     ```json
     {
-      "organisms": ["Mus musculus", "Homo sapiens", "Arabidopsis thaliana"],
-      "mission_envs": ["ISS", "LEO", "Ground"],
-      "exposures": ["microgravity", "radiation", "spaceflight"],
-      "systems": ["immune", "musculoskeletal", "cardiovascular"],
-      "tissues": ["muscle", "bone", "liver"],
-      "assays": ["RNA-seq", "proteomics", "metabolomics"],
-      "years": [2018, 2019, 2020, 2021, 2022, 2023, 2024]
+      "categories": ["space", "biology", "physics"],
+      "tags": ["mice", "mission", "microgravity", ...],
+      "source_types": ["article"],
+      "total_documents": 150,
+      "total_chunks": 3500
     }
     ```
     """
@@ -264,16 +314,14 @@ async def get_filter_values():
         logger.info("🎯 Getting filter values")
         
         repo = get_mongo_repo()
-        values = repo.get_filter_values()
+        filter_values = repo.get_filter_values()
         
         return FilterValuesResponse(
-            organisms=values.get("organism", []),
-            mission_envs=values.get("mission_env", []),
-            exposures=values.get("exposure", []),
-            systems=values.get("system", []),
-            tissues=values.get("tissue", []),
-            assays=values.get("assay", []),
-            years=sorted(values.get("year", []), reverse=True)
+            categories=filter_values.get("categories", []),
+            tags=filter_values.get("tags", []),
+            source_types=filter_values.get("source_types", []),
+            total_documents=filter_values.get("total_documents", 0),
+            total_chunks=filter_values.get("total_chunks", 0)
         )
         
     except Exception as e:
@@ -284,17 +332,23 @@ async def get_filter_values():
 @router.get("/stats")
 async def get_statistics():
     """
-    📊 **Obtener estadísticas generales de la base de datos**
+    📊 **Obtener estadísticas de la base de datos**
     
-    Retorna contadores y métricas útiles.
+    Retorna estadísticas generales de la colección.
+    
+    **Ejemplo:**
+    ```
+    GET /api/front/stats
+    ```
     
     **Respuesta:**
     ```json
     {
       "total_documents": 150,
       "total_chunks": 3500,
-      "organisms_count": 25,
-      "years_range": [2015, 2024]
+      "categories_count": 3,
+      "tags_count": 250,
+      "source_types": ["article"]
     }
     ```
     """
@@ -302,24 +356,15 @@ async def get_statistics():
         logger.info("📊 Getting database statistics")
         
         repo = get_mongo_repo()
-        
-        # Contar documentos únicos
-        total_docs = repo.count_documents()
-        
-        # Contar chunks totales
-        total_chunks = repo.collection.count_documents({"pk": "nasa"})
-        
-        # Obtener valores de filtros para contar
         filter_values = repo.get_filter_values()
         
-        years = filter_values.get("year", [])
-        
         return {
-            "total_documents": total_docs,
-            "total_chunks": total_chunks,
-            "organisms_count": len(filter_values.get("organism", [])),
-            "mission_envs_count": len(filter_values.get("mission_env", [])),
-            "years_range": [min(years), max(years)] if years else [None, None]
+            "total_documents": filter_values.get("total_documents", 0),
+            "total_chunks": filter_values.get("total_chunks", 0),
+            "categories_count": len(filter_values.get("categories", [])),
+            "tags_count": len(filter_values.get("tags", [])),
+            "source_types": filter_values.get("source_types", []),
+            "categories": filter_values.get("categories", [])
         }
         
     except Exception as e:

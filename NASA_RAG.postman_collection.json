@@ -220,6 +220,167 @@
         "description": "Test de retrieval sin síntesis LLM. Retorna chunks recuperados directamente."
       },
       "response": []
+    },
+    {
+      "name": "Frontend - List Documents",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/front/documents?skip=0&limit=20",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "documents"],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0",
+              "description": "Documentos a saltar (paginación)"
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "Documentos por página (max 100)"
+            }
+          ]
+        },
+        "description": "Lista todos los documentos únicos (papers) con paginación. No requiere búsqueda vectorial."
+      },
+      "response": []
+    },
+    {
+      "name": "Frontend - Search Documents",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"organism\": [\"Mus musculus\"],\n  \"mission_env\": [\"ISS\"],\n  \"year_min\": 2020,\n  \"year_max\": 2024,\n  \"search_text\": \"immune\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/front/documents/search?skip=0&limit=20",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "documents", "search"],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Buscar documentos con filtros facetados. Todos los filtros son opcionales."
+      },
+      "response": []
+    },
+    {
+      "name": "Frontend - Search (Solo Organism)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"organism\": [\"Mus musculus\"]\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/front/documents/search?skip=0&limit=20",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "documents", "search"]
+        },
+        "description": "Ejemplo: búsqueda solo por organismo"
+      },
+      "response": []
+    },
+    {
+      "name": "Frontend - Search (Text Only)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"search_text\": \"microgravity\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/api/front/documents/search",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "documents", "search"]
+        },
+        "description": "Ejemplo: búsqueda solo por texto"
+      },
+      "response": []
+    },
+    {
+      "name": "Frontend - Get Document Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/front/documents/GLDS-123",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "documents", "GLDS-123"]
+        },
+        "description": "Obtener detalle completo de un documento con todos sus chunks. Cambia 'GLDS-123' por un source_id real."
+      },
+      "response": []
+    },
+    {
+      "name": "Frontend - Get Filter Values",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/front/filters",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "filters"]
+        },
+        "description": "Obtener todos los valores únicos para cada filtro. Útil para poblar dropdowns."
+      },
+      "response": []
+    },
+    {
+      "name": "Frontend - Get Statistics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/api/front/stats",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["api", "front", "stats"]
+        },
+        "description": "Obtener estadísticas generales de la base de datos (total docs, chunks, etc)."
+      },
+      "response": []
     }
   ],
   "variable": [
