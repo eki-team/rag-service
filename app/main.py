@@ -5,7 +5,7 @@ NASA Biology RAG Service - Main FastAPI App
 from fastapi import FastAPI
 from app.core.settings import settings
 from app.core.security import setup_cors
-from app.api.routers import chat, diag
+from app.api.routers import chat, diag, front
 import logging
 
 # Setup logging
@@ -31,6 +31,7 @@ setup_cors(app)
 # Include routers
 app.include_router(chat.router)
 app.include_router(diag.router)
+app.include_router(front.router)
 
 logger.info(f"🚀 NASA RAG initialized - Backend: {settings.VECTOR_BACKEND}")
 

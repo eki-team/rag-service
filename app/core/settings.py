@@ -9,6 +9,9 @@ from typing import Literal
 class Settings(BaseSettings):
     """Settings para NASA RAG - Vector store + OpenAI"""
     
+    # === Environment ===
+    ENVIRONMENT: str = "development"
+    
     # === OpenAI Config (solo para LLM, NO embeddings) ===
     OPENAI_API_KEY: str
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
@@ -61,7 +64,11 @@ class Settings(BaseSettings):
     LOG_RETRIEVAL: bool = True
     LOG_GROUNDING: bool = True
     
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        env_file_encoding="utf-8",
+        extra="ignore"  # Ignorar campos extra en .env
+    )
     
     @property
     def allowed_sources_list(self) -> list[str]:
