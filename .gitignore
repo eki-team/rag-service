@@ -34,4 +34,4 @@ Thumbs.db   # Windows
 tests/
 
 # Ignorar archivos de documentación generados
-CONTEXT/
+contexts/
