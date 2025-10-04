@@ -27,7 +27,12 @@ def re_index_documents(batch_size: int = 50, skip_existing: bool = False):
     try:
         # Conectar a MongoDB
         logger.info(f"🔌 Connecting to MongoDB: {settings.MONGODB_URI}")
-        client = MongoClient(settings.MONGODB_URI)
+        client = MongoClient(
+            settings.MONGODB_URI,
+            serverSelectionTimeoutMS=60000,
+            connectTimeoutMS=60000,
+            socketTimeoutMS=60000
+        )
         db = client[settings.MONGODB_DB]
         collection = db[settings.MONGODB_COLLECTION]
         
