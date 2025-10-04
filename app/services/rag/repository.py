@@ -20,10 +20,10 @@ class RepositoryService:
     def repo(self):
         """Lazy-load del repo según backend configurado"""
         if self._repo is None:
-            if self.backend == "cosmos":
-                from app.db.cosmos_repo import get_cosmos_repo
-                self._repo = get_cosmos_repo()
-                logger.info("✅ Using Cosmos DB backend")
+            if self.backend == "mongodb":
+                from app.db.mongo_repo import get_mongo_repo
+                self._repo = get_mongo_repo()
+                logger.info("✅ Using MongoDB backend")
             elif self.backend == "pgvector":
                 # Descomentado cuando se active pgvector
                 # from app.db.pgvector_repo import get_pgvector_repo

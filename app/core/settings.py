@@ -17,15 +17,13 @@ class Settings(BaseSettings):
     OPENAI_TEMPERATURE: float = 0.2
     
     # === Vector Backend ===
-    VECTOR_BACKEND: Literal["cosmos", "pgvector"] = "cosmos"
+    VECTOR_BACKEND: Literal["mongodb", "pgvector"] = "mongodb"
     
-    # === Cosmos DB (opción A - prod) ===
-    COSMOS_URL: str = ""
-    COSMOS_KEY: str = ""
-    COSMOS_DB: str = "nasa_bio"
-    COSMOS_CONTAINER: str = "pub_chunks"
-    COSMOS_PARTITION_KEY: str = "/pk"
-    COSMOS_VECTOR_FN: str = ""  # nombre de la función de similarity si aplica
+    # === MongoDB (opción A - prod) ===
+    MONGODB_URI: str = "mongodb://localhost:27017"
+    MONGODB_DB: str = "nasa_bio"
+    MONGODB_COLLECTION: str = "pub_chunks"
+    MONGODB_VECTOR_INDEX: str = "vector_index"  # nombre del índice vectorial
     
     # === PostgreSQL + pgvector (opción B - comentada) ===
     # POSTGRES_USER: str = ""

@@ -7,7 +7,7 @@
 
 ## 📋 Features
 
-- ✅ **Vector search** con Cosmos DB NoSQL (o pgvector como alternativa)
+- ✅ **Vector search** con MongoDB Atlas (o pgvector como alternativa)
 - ✅ **Filtros facetados**: organism, mission environment, exposure type, tissue, year
 - ✅ **Grounding con citas explícitas**: todas las afirmaciones incluyen `[N]` citations
 - ✅ **Priorización por sección**: Results > Conclusion > Methods > Introduction
@@ -28,7 +28,7 @@ app/
     security.py       # CORS, rate limit
     constants.py      # FACETS, SECTION_PRIORITY
   db/
-    cosmos_repo.py    # Cosmos DB (opción A)
+    mongo_repo.py     # MongoDB (opción A)
     pgvector_repo.py  # pgvector (opción B, comentada)
   schemas/
     chat.py           # ChatRequest, ChatResponse
@@ -62,7 +62,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Editar .env con tus credenciales (OpenAI, Cosmos DB)
+# Editar .env con tus credenciales (OpenAI, MongoDB)
 ```
 
 ### 3. Correr el servicio
@@ -178,11 +178,12 @@ OPENAI_API_KEY=sk-...
 OPENAI_CHAT_MODEL=gpt-4o-mini
 OPENAI_EMBED_MODEL=text-embedding-3-small
 
-VECTOR_BACKEND=cosmos  # cosmos | pgvector
-COSMOS_URL=https://your-account.documents.azure.com:443/
-COSMOS_KEY=your-key
-COSMOS_DB=nasa_bio
-COSMOS_CONTAINER=pub_chunks
+VECTOR_BACKEND=mongodb  # mongodb | pgvector
+MONGODB_URI=mongodb://localhost:27017
+# Para Atlas: mongodb+srv://user:password@cluster.mongodb.net/
+MONGODB_DB=nasa_bio
+MONGODB_COLLECTION=pub_chunks
+MONGODB_VECTOR_INDEX=vector_index
 
 NASA_MODE=true
 NASA_GUIDED_ENABLED=false
@@ -214,7 +215,45 @@ curl http://localhost:8000/diag/health
 
 ---
 
-## 🛠️ pgvector (Opción B)
+## �️ MongoDB Atlas Vector Search
+
+Este servicio usa **MongoDB Atlas Vector Search** para búsquedas vectoriales. Necesitas:
+
+1. **Crear un índice vectorial** en tu colección:
+
+```javascript
+// En MongoDB Atlas, crear índice vectorial:
+{
+  "fields": [
+    {
+      "type": "vector",
+      "path": "embedding",
+      "numDimensions": 1536,
+      "similarity": "cosine"
+    },
+    {
+      "type": "filter",
+      "path": "organism"
+    },
+    {
+      "type": "filter",
+      "path": "mission_env"
+    },
+    {
+      "type": "filter",
+      "path": "year"
+    }
+  ]
+}
+```
+
+2. **Configurar URI** en `.env`:
+   - Local: `mongodb://localhost:27017`
+   - Atlas: `mongodb+srv://user:password@cluster.mongodb.net/`
+
+---
+
+## �🛠️ pgvector (Opción B)
 
 Si prefieres PostgreSQL + pgvector:
 
@@ -233,7 +272,7 @@ Si prefieres PostgreSQL + pgvector:
 
 - **fastapi**, **uvicorn**: API
 - **httpx**: Cliente HTTP (OpenAI)
-- **azure-cosmos**: Cosmos DB
+- **pymongo**: MongoDB driver
 - **tiktoken**: Token counting
 - **loguru**: Logging
 - **rapidfuzz**: Dedup/snippets

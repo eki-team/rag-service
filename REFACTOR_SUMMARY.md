@@ -47,7 +47,7 @@ README.md                      # Documentación completa
 ## 🎯 Features Implementadas:
 
 1. ✅ Settings centralizados (settings.py) con NASA config
-2. ✅ Cosmos DB como vector store principal (pgvector comentado)
+2. ✅ MongoDB como vector store principal (pgvector comentado)
 3. ✅ Filtros facetados (organism, mission_env, exposure, etc.)
 4. ✅ Re-ranking por sección (Results > Conclusion > Methods > Intro)
 5. ✅ Dedup por DOI
@@ -93,7 +93,7 @@ curl -X POST http://localhost:8000/diag/retrieval_audit
 
 ## ⚠️ Notas:
 
-- Cosmos DB vector search puede requerir ajustes en la query SQL según tu implementación
+- MongoDB usa Atlas Vector Search (requiere índice vectorial configurado)
 - pgvector está comentado (descomentar si se usa)
 - Modo Guided deshabilitado (NASA_GUIDED_ENABLED=false)
 - ETL debe generar chunks con el schema definido en schemas/chunk.py
@@ -103,7 +103,7 @@ curl -X POST http://localhost:8000/diag/retrieval_audit
 
 ## 🔧 Próximos Pasos:
 
-1. Configurar Cosmos DB con índices vectoriales
+1. Configurar MongoDB Atlas con índice vectorial (ver guía en README)
 2. Ejecutar ETL para indexar papers de OSDR/LSL/TASKBOOK
 3. Validar retrieval con golden queries
 4. Ajustar prompts según feedback de usuarios
