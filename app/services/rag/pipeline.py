@@ -37,11 +37,12 @@ class RAGPipeline:
         """
         Proceso completo de RAG:
         1. Generar embedding de query
-        2. Retrieval con filtros
-        3. Build context
-        4. LLM synthesis
-        5. Extract citations
-        6. Return response con métricas
+        2. Enhance filters with auto-extracted tags from query
+        3. Retrieval con filtros
+        4. Build context
+        5. LLM synthesis
+        6. Extract citations
+        7. Return response con métricas
         """
         start_time = time()
         
@@ -49,10 +50,13 @@ class RAGPipeline:
         logger.info(f"🔍 Query: {query[:100]}...")
         query_vec = self._get_embedding(query)
         
+        # 1.5. Auto-extract tags from query and merge with existing filters
+        enhanced_filters = self._enhance_filters_with_query_tags(query, filters)
+        
         # 2. Retrieval
-        chunks = self.retriever.retrieve(query_vec, filters, top_k)
+        chunks = self.retriever.retrieve(query_vec, enhanced_filters, top_k)
         if not chunks:
-            return self._empty_response(query, filters, session_id)
+            return self._empty_response(query, enhanced_filters, session_id)
         
         # 3. Build context
         context = self.context_builder.build_context(chunks)
@@ -80,7 +84,7 @@ class RAGPipeline:
         return ChatResponse(
             answer=answer,
             citations=citations,
-            used_filters=filters,
+            used_filters=enhanced_filters,
             metrics=metrics,
             session_id=session_id,
         )
@@ -119,12 +123,40 @@ class RAGPipeline:
             data = response.json()
             return data["choices"][0]["message"]["content"]
     
+    def _extract_title_from_text(self, text: str) -> Optional[str]:
+        """Extract title from text content - usually the first line or after 'Title:'"""
+        if not text:
+            return None
+        
+        lines = text.split('\n')
+        for line in lines[:5]:  # Check first 5 lines
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if line starts with "Title:"
+            if line.lower().startswith('title:'):
+                title = line[6:].strip()
+                if title:
+                    return title
+            
+            # If first substantial line (> 10 chars), consider it the title
+            if len(line) > 10 and not line.startswith(('Abstract', 'Keywords', 'Authors')):
+                return line
+        
+        return None
+    
     def _extract_citations(self, chunks: list[Dict[str, Any]]) -> list[Citation]:
-        """Extraer citations de chunks con información de scoring"""
+        """Extraer citations de chunks con información completa de metadata"""
         citations = []
         for idx, chunk in enumerate(chunks, start=1):
             # Snippet: primeras 200 chars
             snippet = chunk.get("text", "")[:200] + "..."
+            
+            # Extract title from text if not available in metadata
+            title = chunk.get("title")
+            if not title:
+                title = self._extract_title_from_text(chunk.get("text", ""))
             
             # Extract scoring information
             similarity = chunk.get("similarity", chunk.get("base_similarity"))
@@ -143,15 +175,51 @@ class RAGPipeline:
             
             relevance_reason = " | ".join(reason_parts) if reason_parts else "Selected by retrieval system"
             
+            # Get metadata object
+            metadata = chunk.get("metadata", {})
+            
+            # Extract URLs - prioritize source_url from metadata or document
+            source_url = chunk.get("source_url") or metadata.get("source_url")
+            url = chunk.get("url") or metadata.get("url") or source_url
+            
             citations.append(Citation(
+                # Document identifiers
+                document_id=str(chunk.get("_id")) if chunk.get("_id") else None,
                 source_id=chunk.get("source_id", f"chunk_{idx}"),
                 doi=chunk.get("doi"),
                 osdr_id=chunk.get("osdr_id"),
+                
+                # Content fields
                 section=section,
                 snippet=snippet,
-                url=chunk.get("url"),
-                title=chunk.get("title"),
+                title=title,
+                
+                # URLs and links
+                url=url,
+                source_url=source_url,
+                
+                # Publication metadata
                 year=chunk.get("year"),
+                venue=chunk.get("venue"),
+                source_type=chunk.get("source_type"),
+                
+                # Biological metadata
+                organism=chunk.get("organism"),
+                system=chunk.get("system"),
+                mission_env=chunk.get("mission_env"),
+                exposure=chunk.get("exposure"),
+                assay=chunk.get("assay"),
+                tissue=chunk.get("tissue"),
+                
+                # Chunk metadata
+                chunk_index=chunk.get("chunk_index"),
+                total_chunks=chunk.get("total_chunks"),
+                created_at=chunk.get("created_at"),
+                
+                # Full metadata object
+                metadata=metadata,
+                
+                # Scoring and relevance information
                 similarity_score=round(similarity, 4) if similarity else None,
                 section_boost=round(section_boost, 4) if section_boost else None,
                 final_score=round(final_score, 4) if final_score else None,
@@ -184,6 +252,83 @@ class RAGPipeline:
             ),
             session_id=session_id,
         )
+    
+    def _enhance_filters_with_query_tags(self, query: str, filters: Optional[FilterFacets]) -> FilterFacets:
+        """
+        Extract relevant tags from user query and merge with existing filters.
+        Uses keyword matching and domain-specific tag extraction.
+        """
+        # Domain-specific keywords mapping to tags
+        keyword_to_tags = {
+            # Biological systems
+            "bone": ["bone", "skeleton", "musculoskeletal"],
+            "muscle": ["muscle", "musculoskeletal", "skeletal"],
+            "brain": ["brain", "neurological", "central-nervous"],
+            "heart": ["cardiovascular", "cardiac", "heart"],
+            "immune": ["immune", "immunology", "defense"],
+            "kidney": ["renal", "kidney", "urinary"],
+            "liver": ["hepatic", "liver", "metabolism"],
+            "lung": ["pulmonary", "respiratory", "lung"],
+            "eye": ["ocular", "vision", "sensory"],
+            
+            # Space conditions
+            "microgravity": ["microgravity", "weightlessness", "gravity"],
+            "radiation": ["radiation", "cosmic", "ionizing"],
+            "space": ["space", "spaceflight", "mission"],
+            "iss": ["iss", "station", "orbital"],
+            "mars": ["mars", "planetary", "deep-space"],
+            
+            # Biological processes
+            "gene": ["genomics", "gene-expression", "molecular"],
+            "protein": ["proteomics", "protein", "molecular"],
+            "cell": ["cellular", "cytology", "cell-biology"],
+            "metabolism": ["metabolism", "biochemistry", "energy"],
+            "development": ["development", "growth", "morphology"],
+            
+            # Research areas
+            "biomedical": ["biomedical", "medical", "clinical"],
+            "tissue": ["tissue", "histology", "pathology"],
+            "behavior": ["behavioral", "psychology", "neurobehavior"],
+        }
+        
+        # Extract tags from query (case insensitive)
+        query_lower = query.lower()
+        extracted_tags = []
+        
+        for keyword, tags in keyword_to_tags.items():
+            if keyword in query_lower:
+                extracted_tags.extend(tags)
+        
+        # Remove duplicates while preserving order
+        extracted_tags = list(dict.fromkeys(extracted_tags))
+        
+        # Create enhanced filters
+        if filters is None:
+            filters = FilterFacets()
+        
+        # Merge with existing tags
+        existing_tags = filters.tags or []
+        all_tags = existing_tags + extracted_tags
+        
+        # Remove duplicates and limit to top 10 for performance
+        unique_tags = list(dict.fromkeys(all_tags))[:10]
+        
+        # Create new FilterFacets with enhanced tags
+        enhanced_filters = FilterFacets(
+            organism=filters.organism,
+            system=filters.system,
+            mission_env=filters.mission_env,
+            year_range=filters.year_range,
+            exposure=filters.exposure,
+            assay=filters.assay,
+            tissue=filters.tissue,
+            tags=unique_tags if unique_tags else None
+        )
+        
+        if extracted_tags:
+            logger.info(f"🏷️ Auto-extracted tags from query: {extracted_tags}")
+        
+        return enhanced_filters
 
 
 # Singleton

@@ -102,7 +102,7 @@ class MongoRepository:
                 # Step 2: Add similarity score as a field
                 {
                     "$project": {
-                        "_id": 0,
+                        "_id": 1,  # Include MongoDB _id
                         "source_id": 1,
                         "title": 1,
                         "text": 1,
@@ -118,10 +118,12 @@ class MongoRepository:
                         "year": 1,
                         "venue": 1,
                         "url": 1,
+                        "source_url": 1,  # Include source_url
                         "source_type": 1,
                         "chunk_index": 1,
                         "total_chunks": 1,
                         "created_at": 1,
+                        "metadata": 1,  # Include complete metadata object
                         # Get the vector search score
                         "similarity": {"$meta": "vectorSearchScore"}
                     }
@@ -150,6 +152,10 @@ class MongoRepository:
                 if "tissue" in filters and filters["tissue"]:
                     match_conditions["tissue"] = {"$in": filters["tissue"]}
                 
+                if "tags" in filters and filters["tags"]:
+                    # Use $in to match any of the provided tags in the metadata.tags array
+                    match_conditions["metadata.tags"] = {"$in": filters["tags"]}
+                
                 if "year_range" in filters and filters["year_range"]:
                     year_min, year_max = filters["year_range"]
                     match_conditions["year"] = {"$gte": year_min, "$lte": year_max}
@@ -167,7 +173,17 @@ class MongoRepository:
                 })
             
             # Step 5: Execute pipeline
-            logger.info(f"🔍 Vector search: top_k={top_k}, numCandidates={num_candidates}, min_sim={min_similarity}")
+            filters_info = []
+            if filters:
+                if filters.get("tags"):
+                    filters_info.append(f"tags={filters['tags']}")
+                if filters.get("organism"):
+                    filters_info.append(f"organism={filters['organism']}")
+                if filters.get("mission_env"):
+                    filters_info.append(f"mission_env={filters['mission_env']}")
+            
+            filter_desc = f" | filters: {', '.join(filters_info)}" if filters_info else ""
+            logger.info(f"🔍 Vector search: top_k={top_k}, numCandidates={num_candidates}, min_sim={min_similarity}{filter_desc}")
             
             results = list(self.collection.aggregate(pipeline))
             
@@ -224,7 +240,19 @@ class MongoRepository:
                 counts = list(self.collection.aggregate(pipeline))
                 result[field] = {item["_id"]: item["count"] for item in counts if item["_id"]}
             
-            logger.info(f"📊 Facet counts computed for {len(facet_fields)} fields")
+            # Add tags facet counts
+            tags_pipeline = [
+                {"$match": {"pk": settings.NASA_DEFAULT_ORG, "metadata.tags": {"$exists": True, "$ne": []}}},
+                {"$unwind": "$metadata.tags"},
+                {"$group": {"_id": "$metadata.tags", "count": {"$sum": 1}}},
+                {"$sort": {"count": -1}},
+                {"$limit": 50}  # Top 50 most common tags
+            ]
+            
+            tags_counts = list(self.collection.aggregate(tags_pipeline))
+            result["tags"] = {item["_id"]: item["count"] for item in tags_counts if item["_id"]}
+            
+            logger.info(f"📊 Facet counts computed for {len(facet_fields)} fields + tags ({len(result['tags'])} tags)")
             return result
         except PyMongoError as e:
             logger.error(f"❌ facet_counts error: {e}")

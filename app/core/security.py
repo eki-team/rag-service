@@ -58,10 +58,22 @@ async def rate_limit_middleware(request: Request, call_next):
 
 def setup_cors(app):
     """Setup CORS middleware"""
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins_list,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # Verificar si CORS está configurado para permitir todos los orígenes
+    if settings.CORS_ORIGINS.strip(' "') == "*":
+        # Permitir todos los orígenes
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=False,  # IMPORTANTE: False cuando allow_origins=["*"]
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    else:
+        # Usar orígenes específicos
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.cors_origins_list,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )

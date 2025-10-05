@@ -15,6 +15,7 @@ class FilterFacets(BaseModel):
     exposure: Optional[List[str]] = None
     assay: Optional[List[str]] = None
     tissue: Optional[List[str]] = None
+    tags: Optional[List[str]] = None  # New: ETL-generated tags for semantic filtering
     
     class Config:
         json_schema_extra = {
@@ -23,20 +24,48 @@ class FilterFacets(BaseModel):
                 "mission_env": ["ISS", "LEO"],
                 "year_range": [2020, 2024],
                 "exposure": ["microgravity"],
+                "tags": ["biomedical", "bone", "mice", "space"]
             }
         }
 
 
 class Citation(BaseModel):
     """Cita de un paper usado en la respuesta"""
+    # Document identifiers
+    document_id: Optional[str] = Field(None, description="MongoDB document _id")
     source_id: str
     doi: Optional[str] = None
     osdr_id: Optional[str] = None
+    
+    # Content fields
     section: Optional[str] = None
     snippet: str = Field(..., description="Fragmento relevante del chunk")
-    url: Optional[str] = None
     title: Optional[str] = None
+    
+    # URLs and links
+    url: Optional[str] = Field(None, description="Source URL from metadata or document")
+    source_url: Optional[str] = Field(None, description="Original source URL")
+    
+    # Publication metadata
     year: Optional[int] = None
+    venue: Optional[str] = None
+    source_type: Optional[str] = None
+    
+    # Biological metadata
+    organism: Optional[str] = None
+    system: Optional[str] = None
+    mission_env: Optional[str] = None
+    exposure: Optional[str] = None
+    assay: Optional[str] = None
+    tissue: Optional[str] = None
+    
+    # Chunk metadata
+    chunk_index: Optional[int] = None
+    total_chunks: Optional[int] = None
+    created_at: Optional[str] = None
+    
+    # Full metadata object
+    metadata: Optional[dict] = Field(None, description="Complete metadata object from document")
     
     # Scoring and relevance information
     similarity_score: Optional[float] = Field(None, description="Vector similarity score (0-1)")
