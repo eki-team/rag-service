@@ -15,7 +15,7 @@ class FilterFacets(BaseModel):
     exposure: Optional[List[str]] = None
     assay: Optional[List[str]] = None
     tissue: Optional[List[str]] = None
-    tags: Optional[List[str]] = None  # New: ETL-generated tags for semantic filtering
+    tags: Optional[List[str]] = None
     
     class Config:
         json_schema_extra = {
@@ -40,7 +40,7 @@ class Citation(BaseModel):
     # Content fields
     section: Optional[str] = None
     snippet: str = Field(..., description="Fragmento relevante del chunk")
-    title: Optional[str] = None
+    text: Optional[str] = None
     
     # URLs and links
     url: Optional[str] = Field(None, description="Source URL from metadata or document")
@@ -98,25 +98,24 @@ class ChatRequest(BaseModel):
 
 class RetrievalMetrics(BaseModel):
     """Métricas del proceso de retrieval"""
-    latency_ms: float
-    retrieved_k: int
-    grounded_ratio: float = Field(..., description="Ratio de claims con cita")
-    dedup_count: int = 0
-    section_distribution: Optional[dict] = None
+    latency_ms: float = Field(..., description="Latencia total en milisegundos")
+    retrieved_k: int = Field(..., description="Número de chunks recuperados")
+    grounded_ratio: float = Field(..., description="Porcentaje de claims que tienen cita")
+    dedup_count: int = Field(0, description="Número de chunks duplicados removidos")
+    section_distribution: Optional[dict] = Field(None, description="Distribución por sección")
 
 
 class ChatResponse(BaseModel):
-    """Response de POST /api/chat"""
+    """Response del endpoint /api/chat"""
     answer: str = Field(..., description="Respuesta sintetizada con citas")
     citations: List[Citation] = []
-    used_filters: Optional[FilterFacets] = None
     metrics: RetrievalMetrics
     session_id: Optional[str] = None
     
     class Config:
         json_schema_extra = {
             "example": {
-                "answer": "Studies show that microgravity exposure leads to immune dysregulation in mice [1][2]...",
+                "answer": "Studies show that microgravity exposure leads to immune dysregulation in mice...",
                 "citations": [
                     {
                         "source_id": "GLDS-123_chunk_5",
@@ -125,7 +124,7 @@ class ChatResponse(BaseModel):
                         "section": "Results",
                         "snippet": "RNA-seq analysis revealed significant upregulation...",
                         "url": "https://osdr.nasa.gov/bio/repo/data/studies/GLDS-123",
-                        "title": "Microgravity effects on immune response",
+                        "text": "Microgravity effects on immune response",
                         "year": 2023,
                         "similarity_score": 0.87,
                         "section_boost": 0.10,
@@ -133,10 +132,6 @@ class ChatResponse(BaseModel):
                         "relevance_reason": "High similarity (0.87) + Results section boost (+0.10)",
                     }
                 ],
-                "used_filters": {
-                    "organism": ["Mus musculus"],
-                    "mission_env": ["ISS"],
-                },
                 "metrics": {
                     "latency_ms": 1234.5,
                     "retrieved_k": 8,

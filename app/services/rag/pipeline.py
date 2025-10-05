@@ -67,14 +67,20 @@ class RAGPipeline:
         # 5. Citations
         citations = self._extract_citations(chunks)
         
-        # 6. Metrics
+        # 6. Calculate grounding ratio BEFORE cleaning references
+        grounded_ratio = self._estimate_grounding(answer, citations)
+        
+        # 6.5. Clean citation references from answer
+        answer = self._remove_citation_references(answer)
+        
+        # 7. Metrics
         latency_ms = (time() - start_time) * 1000
         section_dist = Counter(c.get("section") for c in chunks if c.get("section"))
         
         metrics = RetrievalMetrics(
             latency_ms=round(latency_ms, 2),
             retrieved_k=len(chunks),
-            grounded_ratio=self._estimate_grounding(answer, citations),
+            grounded_ratio=grounded_ratio,
             dedup_count=top_k - len(chunks),  # approx
             section_distribution=dict(section_dist),
         )
@@ -84,7 +90,6 @@ class RAGPipeline:
         return ChatResponse(
             answer=answer,
             citations=citations,
-            used_filters=enhanced_filters,
             metrics=metrics,
             session_id=session_id,
         )
@@ -146,6 +151,15 @@ class RAGPipeline:
         
         return None
     
+    def _remove_citation_references(self, text: str) -> str:
+        """Remove citation references like [1], [2], [1][2], etc. from text"""
+        import re
+        # Remove patterns like [1], [12], [1][2], [1,2], etc.
+        cleaned_text = re.sub(r'\[\d+(?:,\s*\d+)*\]', '', text)
+        # Remove multiple spaces and clean up
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text).strip()
+        return cleaned_text
+    
     def _extract_citations(self, chunks: list[Dict[str, Any]]) -> list[Citation]:
         """Extraer citations de chunks con información completa de metadata"""
         citations = []
@@ -153,10 +167,10 @@ class RAGPipeline:
             # Snippet: primeras 200 chars
             snippet = chunk.get("text", "")[:200] + "..."
             
-            # Extract title from text if not available in metadata
-            title = chunk.get("title")
-            if not title:
-                title = self._extract_title_from_text(chunk.get("text", ""))
+            # Extract text from text if not available in metadata
+            text = chunk.get("title")
+            if not text:
+                text = self._extract_title_from_text(chunk.get("text", ""))
             
             # Extract scoring information
             similarity = chunk.get("similarity", chunk.get("base_similarity"))
@@ -192,7 +206,7 @@ class RAGPipeline:
                 # Content fields
                 section=section,
                 snippet=snippet,
-                title=title,
+                text=text,
                 
                 # URLs and links
                 url=url,
@@ -214,7 +228,7 @@ class RAGPipeline:
                 # Chunk metadata
                 chunk_index=chunk.get("chunk_index"),
                 total_chunks=chunk.get("total_chunks"),
-                created_at=chunk.get("created_at"),
+                created_at=str(chunk.get("created_at")) if chunk.get("created_at") else None,
                 
                 # Full metadata object
                 metadata=metadata,
@@ -244,7 +258,6 @@ class RAGPipeline:
         return ChatResponse(
             answer="No relevant results found for your query. Try adjusting filters or rephrasing the question.",
             citations=[],
-            used_filters=filters,
             metrics=RetrievalMetrics(
                 latency_ms=0.0,
                 retrieved_k=0,

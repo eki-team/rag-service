@@ -11,59 +11,41 @@ Instructions:
 6. State limitations when relevant.
 7. Keep responses focused and direct.
 
-Context:
-{context}
-
-Question:
-{query}
-
-Answer:
+Context: {context}
+Question: {query}
 """
 
-CONSENSUS_ANALYSIS_PROMPT = """Analyze the scientific evidence provided.
+CONSENSUS_ANALYSIS_PROMPT = """Analyze the following research findings for consensus and conflicts.
 
-Given the context below, identify:
-1. Consensus findings: Claims supported by multiple studies
-2. Conflicting findings: Claims where studies disagree
-3. Confidence level: High/Medium/Low based on evidence quality
+Instructions:
+1. Identify areas of scientific agreement across sources.
+2. Note any contradictory findings.
+3. Assess confidence levels based on study quality.
+4. Provide a balanced synthesis without formatting decorations.
 
-Context:
-{context}
-
-Question:
-{query}
-
-Analysis:
+Research Findings: {findings}
 """
 
-ACTIONABLE_INSIGHTS_PROMPT = """You are advising NASA mission planners.
+ACTIONABLE_INSIGHTS_PROMPT = """Based on the research context, provide practical insights for space biology research.
 
-Based on the scientific context, provide:
-1. Key findings
-2. Risks for missions
-3. Critical gaps
-4. Recommendations
+Instructions:
+1. Focus on research gaps and opportunities.
+2. Suggest specific experimental approaches.
+3. Highlight safety considerations for space environments.
+4. Keep recommendations concrete and evidence-based.
 
-Keep responses concise and factual.
-
-Context:
-{context}
-
-Question:
-{query}
-
-Mission Planning Insights:
+Context: {context}
+Research Question: {query}
 """
 
-QUESTION_GENERATION_PROMPT = """Generate a clear research question based on the context.
+QUESTION_GENERATION_PROMPT = """Generate relevant follow-up questions based on the research context.
 
-Requirements:
-- Focus on biological effects of spaceflight conditions
-- Be specific about organism, system, or condition studied
-- Use scientific terminology appropriately
+Instructions:
+1. Create 3-5 specific research questions.
+2. Focus on gaps in current knowledge.
+3. Consider practical applications for space missions.
+4. Ensure questions are answerable with scientific methods.
 
-Context:
-{context}
-
-Generate one focused research question:
+Research Context: {context}
+Current Question: {query}
 """
