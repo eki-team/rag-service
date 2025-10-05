@@ -7,13 +7,23 @@
 
 ## 📋 Features
 
-- ✅ **Vector search** con MongoDB Atlas (384 dims, cosine similarity)
-- ✅ **Local embeddings** con all-MiniLM-L6-v2 (~14K oraciones/seg en CPU)
+### 🎯 Advanced RAG System (v2.0)
+- ✅ **Query Expansion** con TAG_DICT (80+ conceptos → 300+ términos)
+- ✅ **Reranking avanzado** con 8 señales (similarity, section, authority, recency, diversity, etc.)
+- ✅ **Section-aware** con prioridades: Abstract/Results (+0.10) > Discussion (+0.07) > Methods (+0.03)
+- ✅ **Authority boost** para fuentes confiables (nasa.gov, nature.com, science.org)
+- ✅ **Diversity enforcement**: Máx 2 chunks/documento, cobertura ≥3 fuentes
+- ✅ **Citas estrictas**: TODAS las afirmaciones incluyen `[N]` citations (mandatory)
+- ✅ **Faithfulness**: Solo información del contexto, NO external knowledge
+- ✅ **Grounding metrics**: % de sentences con citas (target: ≥80%)
+
+### 🔧 Infrastructure
+- ✅ **Vector search** con MongoDB Atlas (1536 dims OpenAI embeddings, cosine similarity)
 - ✅ **Filtros facetados**: organism, mission environment, exposure type, tissue, year
-- ✅ **Grounding con citas explícitas**: todas las afirmaciones incluyen `[N]` citations
-- ✅ **Priorización por sección**: Results > Conclusion > Methods > Introduction
 - ✅ **GPT-4o-mini** para síntesis (OpenAI)
 - ✅ **Endpoints de diagnóstico**: health, embeddings, retrieval, audit
+
+📖 **Ver documentación completa**: [ADVANCED_RAG.md](./ADVANCED_RAG.md)
 
 ---
 
@@ -121,22 +131,31 @@ RAG completo: pregunta → retrieval → síntesis → respuesta con citas.
 }
 ```
 
-**Response:**
+**Response (con Advanced RAG):**
 ```json
 {
-  "answer": "Studies show that microgravity exposure leads to immune dysregulation [1][2]...",
+  "answer": "Microgravity exposure leads to significant immune dysregulation in mice [1][3]. RNA-seq analysis revealed upregulation of pro-inflammatory cytokines including IL-6 and TNF-α [2]. Studies on the ISS showed decreased T-cell proliferation and altered cytokine profiles [1]. While baseline immune function recovered after 7 days post-landing [3], chronic spaceflight may pose increased infection risk [4].",
   "citations": [
     {
       "source_id": "GLDS-123_chunk_5",
-      "doi": "10.1038/...",
+      "doi": "10.1038/s41586-2023-12345",
       "section": "Results",
-      "snippet": "RNA-seq analysis revealed..."
+      "snippet": "RNA-seq analysis revealed significant upregulation of pro-inflammatory cytokines...",
+      "year": 2023,
+      "url": "https://www.nature.com/articles/...",
+      "rerank_score": 0.9145,
+      "relevance_reason": "Sim: 0.823 | Sec: 0.100 | Keyword: 0.654 | Authority: 0.070 | Final: 0.915"
     }
   ],
   "metrics": {
-    "latency_ms": 1234.5,
-    "retrieved_k": 8,
-    "grounded_ratio": 0.92 
+    "latency_ms": 2345.67,
+    "retrieved_k": 6,
+    "grounded_ratio": 0.92,
+    "section_distribution": {
+      "Results": 3,
+      "Discussion": 2,
+      "Abstract": 1
+    }
   }
 }
 ```

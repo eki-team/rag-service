@@ -1,0 +1,183 @@
+"""
+TAG_DICT - Diccionario de expansión de términos para NASA Biology RAG
+=====================================================================
+
+Mapea conceptos clave a sinónimos, acrónimos y términos relacionados para
+enriquecer las queries del usuario.
+
+Categorías:
+- Instrumentos/Tecnología
+- Misiones/Ubicaciones
+- Organismos modelo
+- Dominios científicos
+- Exposiciones/Condiciones
+- Métodos experimentales
+"""
+
+TAG_DICT = {
+    # =========================================================================
+    # MISIONES Y UBICACIONES
+    # =========================================================================
+    "iss": ["international space station", "orbital", "station", "leo"],
+    "space shuttle": ["shuttle", "sts", "columbia", "discovery", "atlantis"],
+    "spaceflight": ["space flight", "space mission", "orbital mission"],
+    "leo": ["low earth orbit", "orbital", "near-earth"],
+    "ground": ["ground control", "terrestrial", "earth-based", "baseline"],
+    
+    # =========================================================================
+    # CONDICIONES DE EXPOSICIÓN
+    # =========================================================================
+    "microgravity": ["weightlessness", "zero gravity", "μg", "reduced gravity"],
+    "radiation": ["cosmic radiation", "ionizing radiation", "space radiation", "galactic cosmic rays", "gcr"],
+    "spaceflight": ["space flight", "orbital flight", "space exposure"],
+    
+    # =========================================================================
+    # ORGANISMOS MODELO
+    # =========================================================================
+    "mouse": ["mice", "mus musculus", "murine", "rodent"],
+    "mice": ["mouse", "mus musculus", "murine", "rodent"],
+    "mus musculus": ["mouse", "mice", "murine"],
+    "rat": ["rats", "rattus", "rodent"],
+    "arabidopsis": ["arabidopsis thaliana", "thale cress", "plant model"],
+    "drosophila": ["fruit fly", "drosophila melanogaster", "fly"],
+    "c elegans": ["caenorhabditis elegans", "nematode", "worm"],
+    "human": ["homo sapiens", "astronaut", "crew member"],
+    
+    # =========================================================================
+    # SISTEMAS BIOLÓGICOS
+    # =========================================================================
+    "immune": ["immunity", "immunology", "immune system", "immune response", "immunological"],
+    "bone": ["skeletal", "osseous", "bone tissue", "osteoblast", "osteoclast", "osteo"],
+    "muscle": ["muscular", "skeletal muscle", "myofiber", "myofibril", "myocyte"],
+    "cardiovascular": ["cardiac", "heart", "vascular", "circulatory"],
+    "neural": ["neurological", "nervous system", "neuron", "brain"],
+    "metabolic": ["metabolism", "metabolome", "metabolomics"],
+    
+    # =========================================================================
+    # MÉTODOS Y TÉCNICAS
+    # =========================================================================
+    "rna-seq": ["rnaseq", "transcriptomics", "gene expression", "sequencing"],
+    "proteomics": ["protein expression", "mass spectrometry", "protein analysis"],
+    "genomics": ["genome", "dna sequencing", "genetic analysis", "wgs"],
+    "microscopy": ["imaging", "histology", "microscope", "micrograph"],
+    "microarray": ["gene chip", "expression array", "affymetrix"],
+    "pcr": ["polymerase chain reaction", "qpcr", "rt-pcr", "amplification"],
+    
+    # =========================================================================
+    # FENÓMENOS Y PROCESOS
+    # =========================================================================
+    "gene expression": ["transcription", "mrna", "transcript", "expression profile"],
+    "dna damage": ["dna repair", "double strand break", "dsb", "genotoxic"],
+    "apoptosis": ["cell death", "programmed cell death", "apoptotic"],
+    "proliferation": ["cell growth", "cell division", "mitosis"],
+    "differentiation": ["cell fate", "stem cell", "lineage"],
+    "inflammation": ["inflammatory", "cytokine", "immune activation"],
+    "oxidative stress": ["ros", "reactive oxygen species", "antioxidant"],
+    "circadian": ["circadian rhythm", "clock gene", "diurnal"],
+    
+    # =========================================================================
+    # BASES DE DATOS Y FUENTES NASA
+    # =========================================================================
+    "osdr": ["open science data repository", "genelab", "glds"],
+    "glds": ["genelab dataset", "osdr"],
+    "taskbook": ["space biology taskbook", "task"],
+    "lsl": ["life sciences laboratory", "life sciences data archive"],
+    
+    # =========================================================================
+    # TECNOLOGÍAS E INSTRUMENTOS
+    # =========================================================================
+    "jwst": ["james webb", "webb telescope", "nirspec", "miri"],
+    "hubble": ["hst", "hubble space telescope"],
+    "modis": ["moderate resolution imaging spectroradiometer", "terra", "aqua"],
+    "landsat": ["earth observation", "remote sensing"],
+    
+    # =========================================================================
+    # CONCEPTOS MOLECULARES
+    # =========================================================================
+    "protein": ["peptide", "polypeptide", "proteome", "amino acid"],
+    "dna": ["genetic", "genome", "nucleic acid", "deoxyribonucleic"],
+    "rna": ["ribonucleic", "transcript", "mrna", "ribosomal"],
+    "pathway": ["signaling", "cascade", "transduction", "network"],
+    
+    # =========================================================================
+    # TEJIDOS Y ÓRGANOS
+    # =========================================================================
+    "tissue": ["organ", "anatomical"],
+    "blood": ["plasma", "serum", "hematological"],
+    "liver": ["hepatic", "hepatocyte"],
+    "kidney": ["renal", "nephron"],
+    "lung": ["pulmonary", "alveolar"],
+    "brain": ["cerebral", "neural", "neuronal"],
+}
+
+
+def get_expanded_terms(query: str) -> set[str]:
+    """
+    Detecta términos del TAG_DICT en la query y retorna el set de términos expandidos.
+    
+    Args:
+        query: Query original del usuario (case-insensitive)
+    
+    Returns:
+        Set de términos adicionales para enriquecer la búsqueda
+    
+    Example:
+        >>> get_expanded_terms("How does microgravity affect mouse bone?")
+        {'weightlessness', 'zero gravity', 'μg', 'skeletal', 'osseous', 'mus musculus', 'murine', ...}
+    """
+    query_lower = query.lower()
+    expanded = set()
+    
+    for key, synonyms in TAG_DICT.items():
+        # Match exacto o fuzzy leve
+        if key in query_lower or any(syn in query_lower for syn in synonyms):
+            expanded.update(synonyms)
+    
+    return expanded
+
+
+def get_matched_keys(query: str) -> list[str]:
+    """
+    Retorna las claves del TAG_DICT que fueron detectadas en la query.
+    Útil para debugging y logging.
+    
+    Args:
+        query: Query original del usuario
+    
+    Returns:
+        Lista de claves detectadas
+    
+    Example:
+        >>> get_matched_keys("How does microgravity affect mouse bone?")
+        ['microgravity', 'mouse', 'bone']
+    """
+    query_lower = query.lower()
+    matched = []
+    
+    for key, synonyms in TAG_DICT.items():
+        if key in query_lower or any(syn in query_lower for syn in synonyms):
+            matched.append(key)
+    
+    return matched
+
+
+def expand_query_text(query: str) -> str:
+    """
+    Construye query expandida concatenando términos adicionales.
+    
+    Args:
+        query: Query original
+    
+    Returns:
+        Query expandida: "original query + expanded term1 + expanded term2..."
+    
+    Example:
+        >>> expand_query_text("microgravity effects on mice")
+        "microgravity effects on mice weightlessness zero gravity mus musculus murine rodent"
+    """
+    expanded_terms = get_expanded_terms(query)
+    if not expanded_terms:
+        return query
+    
+    # Join con espacios (modo "should" en búsqueda)
+    return f"{query} {' '.join(expanded_terms)}"

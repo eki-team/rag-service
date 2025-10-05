@@ -4,7 +4,7 @@ Endpoint POST /api/chat
 """
 from fastapi import APIRouter, HTTPException, status
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.rag.pipeline import get_rag_pipeline
+from app.services.rag.pipeline_advanced import get_rag_pipeline
 import logging
 
 logger = logging.getLogger(__name__)
