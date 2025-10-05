@@ -62,6 +62,7 @@ class RAGPipeline:
         context = self.context_builder.build_context(chunks)
         
         # 4. LLM synthesis
+        logger.info("� Generating answer...")
         answer = await self._synthesize(query, context)
         
         # 5. Citations
