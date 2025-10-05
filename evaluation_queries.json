@@ -1,0 +1,92 @@
+[
+  {
+    "query": "What are the effects of microgravity on bone density in mice?",
+    "ground_truth": null,
+    "category": "musculoskeletal",
+    "tags": ["microgravity", "bone", "mice", "skeletal"]
+  },
+  {
+    "query": "How does spaceflight affect immune system function?",
+    "ground_truth": null,
+    "category": "immunology",
+    "tags": ["spaceflight", "immune", "immunity"]
+  },
+  {
+    "query": "What changes occur in gene expression during space missions?",
+    "ground_truth": null,
+    "category": "genomics",
+    "tags": ["gene", "genomics", "expression", "molecular"]
+  },
+  {
+    "query": "How does radiation exposure affect plant growth in space?",
+    "ground_truth": null,
+    "category": "plant-biology",
+    "tags": ["radiation", "plant", "growth"]
+  },
+  {
+    "query": "What are the effects of microgravity on muscle atrophy?",
+    "ground_truth": null,
+    "category": "musculoskeletal",
+    "tags": ["microgravity", "muscle", "atrophy"]
+  },
+  {
+    "query": "How does the ISS environment affect cellular processes?",
+    "ground_truth": null,
+    "category": "cell-biology",
+    "tags": ["iss", "cellular", "cell"]
+  },
+  {
+    "query": "What cardiovascular changes occur during long-term spaceflight?",
+    "ground_truth": null,
+    "category": "cardiovascular",
+    "tags": ["cardiovascular", "spaceflight", "heart"]
+  },
+  {
+    "query": "How does cosmic radiation impact DNA damage and repair?",
+    "ground_truth": null,
+    "category": "genomics",
+    "tags": ["radiation", "cosmic", "dna", "damage"]
+  },
+  {
+    "query": "What are the molecular mechanisms of spaceflight-induced immune dysregulation?",
+    "ground_truth": null,
+    "category": "immunology",
+    "tags": ["molecular", "immune", "dysregulation", "spaceflight"]
+  },
+  {
+    "query": "How does microgravity influence stem cell differentiation?",
+    "ground_truth": null,
+    "category": "cell-biology",
+    "tags": ["microgravity", "stem-cell", "differentiation"]
+  },
+  {
+    "query": "What are the neurological effects of prolonged space missions?",
+    "ground_truth": null,
+    "category": "neuroscience",
+    "tags": ["neurological", "brain", "nervous-system"]
+  },
+  {
+    "query": "How does weightlessness affect bone remodeling in astronauts?",
+    "ground_truth": null,
+    "category": "musculoskeletal",
+    "tags": ["weightlessness", "bone", "remodeling", "astronaut"]
+  },
+  {
+    "query": "What protein expression changes occur in space-exposed organisms?",
+    "ground_truth": null,
+    "category": "proteomics",
+    "tags": ["protein", "proteomics", "expression"]
+  },
+  {
+    "query": "How does microgravity impact mitochondrial function?",
+    "ground_truth": null,
+    "category": "cell-biology",
+    "tags": ["microgravity", "mitochondria", "cellular"]
+  },
+  {
+    "query": "What are the effects of cosmic radiation on circadian rhythms?",
+    "ground_truth": null,
+    "category": "chronobiology",
+    "tags": ["radiation", "cosmic", "circadian", "rhythm"]
+  }
+]
