@@ -9,7 +9,7 @@ from datetime import datetime
 class ArticleMetadata(BaseModel):
     """Metadatos del artículo desde metadata.article_metadata"""
     url: Optional[str] = None
-    title: str
+    title: Optional[str] = None  # Puede ser None
     authors: List[str] = []
     scraped_at: Optional[str] = None
     pmc_id: Optional[str] = None
@@ -20,7 +20,7 @@ class ArticleMetadata(BaseModel):
 class DocumentMetadata(BaseModel):
     """Metadatos de un documento/paper"""
     pk: str  # ID del documento (ej: mice-in-bion-m-1-space-mission)
-    title: str
+    title: Optional[str] = None  # Título del documento (puede venir de article_metadata.title)
     source_type: Optional[str] = None  # article, etc
     source_url: Optional[str] = None
     category: Optional[str] = None  # space, etc
@@ -30,15 +30,16 @@ class DocumentMetadata(BaseModel):
 
 
 class DocumentChunk(BaseModel):
-    """Chunk completo con metadatos"""
+    """Chunk individual de MongoDB (sin agrupar)"""
+    id: str  # _id de MongoDB convertido a string
     pk: str
     text: str
     source_type: Optional[str] = None
     source_url: Optional[str] = None
     category: Optional[str] = None
     tags: List[str] = []
-    chunk_index: int
-    total_chunks: int
+    chunk_index: Optional[int] = None
+    total_chunks: Optional[int] = None
     char_count: Optional[int] = None
     word_count: Optional[int] = None
     sentences_count: Optional[int] = None
@@ -46,9 +47,12 @@ class DocumentChunk(BaseModel):
 
 
 class DocumentListResponse(BaseModel):
-    """Respuesta con lista de documentos únicos"""
+    """Respuesta con lista de papers únicos"""
     total: int
-    documents: List[DocumentMetadata]
+    documents: List[DocumentMetadata]  # Papers únicos (1 por pk)
+    page: Optional[int] = None
+    page_size: Optional[int] = None
+    total_pages: Optional[int] = None
 
 
 class ChunksListResponse(BaseModel):

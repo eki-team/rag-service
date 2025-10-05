@@ -1,787 +1,297 @@
-{{
-
-  "info": {  "info": {
-
-    "name": "NASA RAG Service - Enhanced",    "name": "NASA RAG Service - Enhanced",
-
-    "description": "Colección Postman actualizada para el servicio RAG de biología espacial con nuevos endpoints de gestión de documentos",    "description": "Colección Postman actualizada para el servicio RAG de biología espacial con nuevos endpoints de gestión de documentos",
-
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-
-    "version": "2.0.0"    "version": "2.0.0"
-
-  },  },
-
-  "item": [  "item": [
-
-    {    {
-
-      "name": "📱 Chat & RAG",      "name": "📱 Chat & RAG",
-
-      "item": [      "item": [
-
-        {        {
-
-          "name": "Chat - Simple Query",          "name": "Chat - Simple Query",
-
-          "request": {          "request": {
-
-            "method": "POST",            "method": "POST",
-
-            "header": [            "header": [
-
-              {              {
-
-                "key": "Content-Type",                "key": "Content-Type",
-
-                "value": "application/json"                "value": "application/json"
-
-              }              }
-
-            ],            ],
-
-            "body": {            "body": {
-
-              "mode": "raw",              "mode": "raw",
-
-              "raw": "{\n  \"query\": \"What are the effects of microgravity on mice?\"\n}"              "raw": "{\n  \"query\": \"What are the effects of microgravity on mice?\"\n}"
-
-            },            },
-
-            "url": {            "url": {
-
-              "raw": "{{base_url}}/api/chat",              "raw": "{{base_url}}/api/chat",
-
-              "host": ["{{base_url}}"],              "host": ["{{base_url}}"],
-
-              "path": ["api", "chat"]              "path": ["api", "chat"]
-
-            },            },
-
-            "description": "Query simple sin filtros. Respuesta con citaciones mejoradas de 26 campos."            "description": "Query simple sin filtros. Respuesta con citaciones mejoradas de 26 campos."
-
-          }          }
-
-        },        },
-
-        {    {
-
-          "name": "Chat - Con Filtros de Categoría",      "name": "Chat - Con Filtros (Organism)",
-
-          "request": {      "request": {
-
-            "method": "POST",        "method": "POST",
-
-            "header": [        "header": [
-
-              {          {
-
-                "key": "Content-Type",            "key": "Content-Type",
-
-                "value": "application/json"            "value": "application/json"
-
-              }          }
-
-            ],        ],
-
-            "body": {        "body": {
-
-              "mode": "raw",          "mode": "raw",
-
-              "raw": "{\n  \"query\": \"How does spaceflight affect immune response?\",\n  \"filters\": {\n    \"category\": \"science\"\n  },\n  \"top_k\": 8\n}"          "raw": "{\n  \"query\": \"How does spaceflight affect immune response?\",\n  \"filters\": {\n    \"organism\": [\"Mus musculus\"]\n  },\n  \"top_k\": 8\n}"
-
-            },        },
-
-            "url": {        "url": {
-
-              "raw": "{{base_url}}/api/chat",          "raw": "http://localhost:8000/api/chat",
-
-              "host": ["{{base_url}}"],          "protocol": "http",
-
-              "path": ["api", "chat"]          "host": ["localhost"],
-
-            },          "port": "8000",
-
-            "description": "Query con filtro de categoría (science, space, physics, etc)."          "path": ["api", "chat"]
-
-          }        },
-
-        },        "description": "Query con filtro de organismo (ratones)."
-
-        {      },
-
-          "name": "Chat - Con Filtros de Tags",      "response": []
-
-          "request": {    },
-
-            "method": "POST",    {
-
-            "header": [      "name": "Chat - Con Múltiples Filtros",
-
-              {      "request": {
-
-                "key": "Content-Type",        "method": "POST",
-
-                "value": "application/json"        "header": [
-
-              }          {
-
-            ],            "key": "Content-Type",
-
-            "body": {            "value": "application/json"
-
-              "mode": "raw",          }
-
-              "raw": "{\n  \"query\": \"What are the biological effects of space radiation?\",\n  \"filters\": {\n    \"tags\": [\"radiation\", \"microgravity\", \"cells\"]\n  }\n}"        ],
-
-            },        "body": {
-
-            "url": {          "mode": "raw",
-
-              "raw": "{{base_url}}/api/chat",          "raw": "{\n  \"query\": \"What are the cardiovascular effects of microgravity?\",\n  \"filters\": {\n    \"organism\": [\"Mus musculus\", \"Homo sapiens\"],\n    \"mission_env\": [\"ISS\", \"LEO\"],\n    \"exposure\": [\"microgravity\"],\n    \"system\": [\"cardiovascular\"]\n  },\n  \"top_k\": 10\n}"
-
-              "host": ["{{base_url}}"],        },
-
-              "path": ["api", "chat"]        "url": {
-
-            },          "raw": "http://localhost:8000/api/chat",
-
-            "description": "Query con filtros de tags específicos."          "protocol": "http",
-
-          }          "host": ["localhost"],
-
-        }          "port": "8000",
-
-      ]          "path": ["api", "chat"]
-
-    },        },
-
-    {        "description": "Query con múltiples filtros combinados."
-
-      "name": "📄 Document Management",      },
-
-      "item": [      "response": []
-
-        {    },
-
-          "name": "Get Document by ID",    {
-
-          "request": {      "name": "Chat - Con Year Range",
-
-            "method": "GET",      "request": {
-
-            "header": [],        "method": "POST",
-
-            "url": {        "header": [
-
-              "raw": "{{base_url}}/api/front/documents/:document_id",          {
-
-              "host": ["{{base_url}}"],            "key": "Content-Type",
-
-              "path": ["api", "front", "documents", ":document_id"],            "value": "application/json"
-
-              "variable": [          }
-
-                {        ],
-
-                  "key": "document_id",        "body": {
-
-                  "value": "68e1ba390d50970aeef2b527",          "mode": "raw",
-
-                  "description": "MongoDB _id del documento"          "raw": "{\n  \"query\": \"Recent studies on bone loss in space\",\n  \"filters\": {\n    \"year_range\": [2020, 2024],\n    \"system\": [\"musculoskeletal\"]\n  },\n  \"top_k\": 5\n}"
-
-                }        },
-
-              ]        "url": {
-
-            },          "raw": "http://localhost:8000/api/chat",
-
-            "description": "📄 Obtener documento completo por su _id de MongoDB, incluyendo todos sus chunks y metadatos."          "protocol": "http",
-
-          }          "host": ["localhost"],
-
-        },          "port": "8000",
-
-        {          "path": ["api", "chat"]
-
-          "name": "Documents - Paginated",        },
-
-          "request": {        "description": "Query con filtro de rango de años (estudios recientes)."
-
-            "method": "GET",      },
-
-            "header": [],      "response": []
-
-            "url": {    },
-
-              "raw": "{{base_url}}/api/front/documents/paginated?page=1&page_size=20&category=space",    {
-
-              "host": ["{{base_url}}"],      "name": "Chat - Radiation Studies",
-
-              "path": ["api", "front", "documents", "paginated"],      "request": {
-
-              "query": [        "method": "POST",
-
-                {        "header": [
-
-                  "key": "page",          {
-
-                  "value": "1",            "key": "Content-Type",
-
-                  "description": "Número de página (empezando en 1)"            "value": "application/json"
-
-                },          }
-
-                {        ],
-
-                  "key": "page_size",        "body": {
-
-                  "value": "20",          "mode": "raw",
-
-                  "description": "Documentos por página (1-100)"          "raw": "{\n  \"query\": \"What are the biological effects of space radiation?\",\n  \"filters\": {\n    \"exposure\": [\"radiation\", \"cosmic rays\"]\n  }\n}"
-
-                },        },
-
-                {        "url": {
-
-                  "key": "category",          "raw": "http://localhost:8000/api/chat",
-
-                  "value": "space",          "protocol": "http",
-
-                  "description": "Filtro opcional por categoría"          "host": ["localhost"],
-
-                }          "port": "8000",
-
-              ]          "path": ["api", "chat"]
-
-            },        },
-
-            "description": "📄 Paginación mejorada de documentos con filtros opcionales de categoría."        "description": "Query sobre efectos de radiación espacial."
-
-          }      },
-
-        },      "response": []
-
-        {    },
-
-          "name": "Documents by Category",    {
-
-          "request": {      "name": "Chat - Plant Biology",
-
-            "method": "GET",      "request": {
-
-            "header": [],        "method": "POST",
-
-            "url": {        "header": [
-
-              "raw": "{{base_url}}/api/front/documents/by-category?category=space&skip=0&limit=20",          {
-
-              "host": ["{{base_url}}"],            "key": "Content-Type",
-
-              "path": ["api", "front", "documents", "by-category"],            "value": "application/json"
-
-              "query": [          }
-
-                {        ],
-
-                  "key": "category",        "body": {
-
-                  "value": "space",          "mode": "raw",
-
-                  "description": "Categoría: general, mission, nasa, physics, planets, science, space, technology"          "raw": "{\n  \"query\": \"How do plants grow in microgravity?\",\n  \"filters\": {\n    \"organism\": [\"Arabidopsis thaliana\"],\n    \"mission_env\": [\"ISS\"]\n  }\n}"
-
-                },        },
-
-                {        "url": {
-
-                  "key": "skip",          "raw": "http://localhost:8000/api/chat",
-
-                  "value": "0",          "protocol": "http",
-
-                  "description": "Documentos a saltar"          "host": ["localhost"],
-
-                },          "port": "8000",
-
-                {          "path": ["api", "chat"]
-
-                  "key": "limit",        },
-
-                  "value": "20",        "description": "Query sobre biología de plantas en el espacio."
-
-                  "description": "Documentos por página"      },
-
-                }      "response": []
-
-              ]    },
-
-            },    {
-
-            "description": "🏷️ Búsqueda de documentos por categoría específica."      "name": "Health Check",
-
-          }      "request": {
-
-        },        "method": "GET",
-
-        {        "header": [],
-
-          "name": "Documents by Tags (ANY)",        "url": {
-
-          "request": {          "raw": "http://localhost:8000/diag/health",
-
-            "method": "GET",          "protocol": "http",
-
-            "header": [],          "host": ["localhost"],
-
-            "url": {          "port": "8000",
-
-              "raw": "{{base_url}}/api/front/documents/by-tags?tags=microgravity,bone,mice&match_all=false&skip=0&limit=20",          "path": ["diag", "health"]
-
-              "host": ["{{base_url}}"],        },
-
-              "path": ["api", "front", "documents", "by-tags"],        "description": "Verifica el estado del servicio."
-
-              "query": [      },
-
-                {      "response": []
-
-                  "key": "tags",    },
-
-                  "value": "microgravity,bone,mice",    {
-
-                  "description": "Tags separados por coma"      "name": "Test Embedding",
-
-                },      "request": {
-
-                {        "method": "POST",
-
-                  "key": "match_all",        "header": [
-
-                  "value": "false",          {
-
-                  "description": "false = debe tener AL MENOS uno de los tags"            "key": "Content-Type",
-
-                },            "value": "application/json"
-
-                {          }
-
-                  "key": "skip",        ],
-
-                  "value": "0"        "body": {
-
-                },          "mode": "raw",
-
-                {          "raw": "{\n  \"text\": \"microgravity effects on immune system\"\n}"
-
-                  "key": "limit",        },
-
-                  "value": "20"        "url": {
-
-                }          "raw": "http://localhost:8000/diag/emb",
-
-              ]          "protocol": "http",
-
-            },          "host": ["localhost"],
-
-            "description": "🏷️ Búsqueda de documentos que tengan AL MENOS uno de los tags especificados."          "port": "8000",
-
-          }          "path": ["diag", "emb"]
-
-        },        },
-
-        {        "description": "Genera embedding de un texto (debug). Retorna vector de 384 dimensiones."
-
-          "name": "Documents by Tags (ALL)",      },
-
-          "request": {      "response": []
-
-            "method": "GET",    },
-
-            "header": [],    {
-
-            "url": {      "name": "Test Retrieval (sin LLM)",
-
-              "raw": "{{base_url}}/api/front/documents/by-tags?tags=science,space&match_all=true&skip=0&limit=20",      "request": {
-
-              "host": ["{{base_url}}"],        "method": "POST",
-
-              "path": ["api", "front", "documents", "by-tags"],        "header": [
-
-              "query": [          {
-
-                {            "key": "Content-Type",
-
-                  "key": "tags",            "value": "application/json"
-
-                  "value": "science,space",          }
-
-                  "description": "Tags separados por coma"        ],
-
-                },        "body": {
-
-                {          "mode": "raw",
-
-                  "key": "match_all",          "raw": "{\n  \"query\": \"What are the effects of microgravity?\",\n  \"top_k\": 5\n}"
-
-                  "value": "true",        },
-
-                  "description": "true = debe tener TODOS los tags"        "url": {
-
-                },          "raw": "http://localhost:8000/diag/retrieval",
-
-                {          "protocol": "http",
-
-                  "key": "skip",          "host": ["localhost"],
-
-                  "value": "0"          "port": "8000",
-
-                },          "path": ["diag", "retrieval"]
-
-                {        },
-
-                  "key": "limit",        "description": "Test de retrieval sin síntesis LLM. Retorna chunks recuperados directamente."
-
-                  "value": "20"      },
-
-                }      "response": []
-
-              ]    },
-
-            },    {
-
-            "description": "🏷️ Búsqueda de documentos que tengan TODOS los tags especificados."      "name": "Frontend - List Documents",
-
-          }      "request": {
-
-        }        "method": "GET",
-
-      ]        "header": [],
-
-    },        "url": {
-
-    {          "raw": "http://localhost:8000/api/front/documents?skip=0&limit=20",
-
-      "name": "📊 Metadata & Filters",          "protocol": "http",
-
-      "item": [          "host": ["localhost"],
-
-        {          "port": "8000",
-
-          "name": "Get Filter Values",          "path": ["api", "front", "documents"],
-
-          "request": {          "query": [
-
-            "method": "GET",            {
-
-            "header": [],              "key": "skip",
-
-            "url": {              "value": "0",
-
-              "raw": "{{base_url}}/api/front/filter-values",              "description": "Documentos a saltar (paginación)"
-
-              "host": ["{{base_url}}"],            },
-
-              "path": ["api", "front", "filter-values"]            {
-
-            },              "key": "limit",
-
-            "description": "📊 Obtener valores disponibles para filtros: categorías (8), tags (60+), tipos de fuente, totales."              "value": "20",
-
-          }              "description": "Documentos por página (max 100)"
-
-        },            }
-
-        {          ]
-
-          "name": "Get Statistics",        },
-
-          "request": {        "description": "Lista todos los documentos únicos (papers) con paginación. No requiere búsqueda vectorial."
-
-            "method": "GET",      },
-
-            "header": [],      "response": []
-
-            "url": {    },
-
-              "raw": "{{base_url}}/api/front/stats",    {
-
-              "host": ["{{base_url}}"],      "name": "Frontend - Search Documents",
-
-              "path": ["api", "front", "stats"]      "request": {
-
-            },        "method": "POST",
-
-            "description": "📊 Estadísticas generales: total documentos (536), chunks (22,674), categorías únicas, etc."        "header": [
-
-          }          {
-
-        }            "key": "Content-Type",
-
-      ]            "value": "application/json"
-
-    },          }
-
-    {        ],
-
-      "name": "🔍 Legacy Search (Compatible)",        "body": {
-
-      "item": [          "mode": "raw",
-
-        {          "raw": "{\n  \"organism\": [\"Mus musculus\"],\n  \"mission_env\": [\"ISS\"],\n  \"year_min\": 2020,\n  \"year_max\": 2024,\n  \"search_text\": \"immune\"\n}"
-
-          "name": "Frontend - List Documents (Legacy)",        },
-
-          "request": {        "url": {
-
-            "method": "GET",          "raw": "http://localhost:8000/api/front/documents/search?skip=0&limit=20",
-
-            "header": [],          "protocol": "http",
-
-            "url": {          "host": ["localhost"],
-
-              "raw": "{{base_url}}/api/front/documents?skip=0&limit=20",          "port": "8000",
-
-              "host": ["{{base_url}}"],          "path": ["api", "front", "documents", "search"],
-
-              "path": ["api", "front", "documents"],          "query": [
-
-              "query": [            {
-
-                {              "key": "skip",
-
-                  "key": "skip",              "value": "0"
-
-                  "value": "0",            },
-
-                  "description": "Documentos a saltar (paginación)"            {
-
-                },              "key": "limit",
-
-                {              "value": "20"
-
-                  "key": "limit",            }
-
-                  "value": "20",          ]
-
-                  "description": "Documentos por página (max 100)"        },
-
-                }        "description": "Buscar documentos con filtros facetados. Todos los filtros son opcionales."
-
-              ]      },
-
-            },      "response": []
-
-            "description": "Lista documentos con el endpoint legacy (compatible con versiones anteriores)."    },
-
-          }    {
-
-        },      "name": "Frontend - Search (Solo Organism)",
-
-        {      "request": {
-
-          "name": "Frontend - Search Documents (Legacy)",        "method": "POST",
-
-          "request": {        "header": [
-
-            "method": "POST",          {
-
-            "header": [            "key": "Content-Type",
-
-              {            "value": "application/json"
-
-                "key": "Content-Type",          }
-
-                "value": "application/json"        ],
-
-              }        "body": {
-
-            ],          "mode": "raw",
-
-            "body": {          "raw": "{\n  \"organism\": [\"Mus musculus\"]\n}"
-
-              "mode": "raw",        },
-
-              "raw": "{\n  \"search_text\": \"microgravity\",\n  \"category\": \"science\",\n  \"tags\": [\"space\", \"physics\"]\n}"        "url": {
-
-            },          "raw": "http://localhost:8000/api/front/documents/search?skip=0&limit=20",
-
-            "url": {          "protocol": "http",
-
-              "raw": "{{base_url}}/api/front/documents/search?skip=0&limit=20",          "host": ["localhost"],
-
-              "host": ["{{base_url}}"],          "port": "8000",
-
-              "path": ["api", "front", "documents", "search"],          "path": ["api", "front", "documents", "search"]
-
-              "query": [        },
-
-                {        "description": "Ejemplo: búsqueda solo por organismo"
-
-                  "key": "skip",      },
-
-                  "value": "0"      "response": []
-
-                },    },
-
-                {    {
-
-                  "key": "limit",      "name": "Frontend - Search (Text Only)",
-
-                  "value": "20"      "request": {
-
-                }        "method": "POST",
-
-              ]        "header": [
-
-            },          {
-
-            "description": "Búsqueda de documentos con filtros (endpoint legacy compatible)."            "key": "Content-Type",
-
-          }            "value": "application/json"
-
-        }          }
-
-      ]        ],
-
-    },        "body": {
-
-    {          "mode": "raw",
-
-      "name": "🔧 Diagnostics & Health",          "raw": "{\n  \"search_text\": \"microgravity\"\n}"
-
-      "item": [        },
-
-        {        "url": {
-
-          "name": "Health Check",          "raw": "http://localhost:8000/api/front/documents/search",
-
-          "request": {          "protocol": "http",
-
-            "method": "GET",          "host": ["localhost"],
-
-            "header": [],          "port": "8000",
-
-            "url": {          "path": ["api", "front", "documents", "search"]
-
-              "raw": "{{base_url}}/diag/health",        },
-
-              "host": ["{{base_url}}"],        "description": "Ejemplo: búsqueda solo por texto"
-
-              "path": ["diag", "health"]      },
-
-            },      "response": []
-
-            "description": "🔧 Verifica el estado del servicio y conexiones."    },
-
-          }    {
-
-        },      "name": "Frontend - Get Document Detail",
-
-        {      "request": {
-
-          "name": "Test Embedding",        "method": "GET",
-
-          "request": {        "header": [],
-
-            "method": "POST",        "url": {
-
-            "header": [          "raw": "http://localhost:8000/api/front/documents/GLDS-123",
-
-              {          "protocol": "http",
-
-                "key": "Content-Type",          "host": ["localhost"],
-
-                "value": "application/json"          "port": "8000",
-
-              }          "path": ["api", "front", "documents", "GLDS-123"]
-
-            ],        },
-
-            "body": {        "description": "Obtener detalle completo de un documento con todos sus chunks. Cambia 'GLDS-123' por un source_id real."
-
-              "mode": "raw",      },
-
-              "raw": "{\n  \"text\": \"microgravity effects on immune system\"\n}"      "response": []
-
-            },    },
-
-            "url": {    {
-
-              "raw": "{{base_url}}/diag/emb",      "name": "Frontend - Get Filter Values",
-
-              "host": ["{{base_url}}"],      "request": {
-
-              "path": ["diag", "emb"]        "method": "GET",
-
-            },        "header": [],
-
-            "description": "🔧 Genera embedding de un texto (debug). Retorna vector de 384 dimensiones."        "url": {
-
-          }          "raw": "http://localhost:8000/api/front/filters",
-
-        },          "protocol": "http",
-
-        {          "host": ["localhost"],
-
-          "name": "Test Retrieval (sin LLM)",          "port": "8000",
-
-          "request": {          "path": ["api", "front", "filters"]
-
-            "method": "POST",        },
-
-            "header": [        "description": "Obtener todos los valores únicos para cada filtro. Útil para poblar dropdowns."
-
-              {      },
-
-                "key": "Content-Type",      "response": []
-
-                "value": "application/json"    },
-
-              }    {
-
-            ],      "name": "Frontend - Get Statistics",
-
-            "body": {      "request": {
-
-              "mode": "raw",        "method": "GET",
-
-              "raw": "{\n  \"query\": \"What are the effects of microgravity?\",\n  \"top_k\": 5\n}"        "header": [],
-
-            },        "url": {
-
-            "url": {          "raw": "http://localhost:8000/api/front/stats",
-
-              "raw": "{{base_url}}/diag/retrieval",          "protocol": "http",
-
-              "host": ["{{base_url}}"],          "host": ["localhost"],
-
-              "path": ["diag", "retrieval"]          "port": "8000",
-
-            },          "path": ["api", "front", "stats"]
-
-            "description": "🔧 Test de retrieval sin síntesis LLM. Retorna chunks recuperados directamente."        },
-
-          }        "description": "Obtener estadísticas generales de la base de datos (total docs, chunks, etc)."
-
-        }      },
-
-      ]      "response": []
-
-    }    }
-
-  ],  ],
-
-  "variable": [  "variable": [
-
-    {    {
-
-      "key": "base_url",      "key": "base_url",
-
-      "value": "http://localhost:8000",      "value": "http://localhost:8000",
-
-      "type": "string"      "type": "string"
-
-    }    }
-
-  ]  ]
-
-}}
+﻿{
+  "info": {
+    "name": "NASA RAG Service - Enhanced",
+    "description": "Colección Postman actualizada para el servicio RAG de biología espacial con nuevos endpoints de gestión de documentos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "2.0.0"
+  },
+  "item": [
+    {
+      "name": "📱 Chat & RAG",
+      "item": [
+        {
+          "name": "Chat - Simple Query",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"What are the effects of microgravity on mice?\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat"]
+            },
+            "description": "Query simple sin filtros. Respuesta con citaciones mejoradas de 26 campos."
+          }
+        },
+        {
+          "name": "Chat - Con Filtros de Categoría",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"How does spaceflight affect immune response?\",\n  \"filters\": {\n    \"category\": \"science\"\n  },\n  \"top_k\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat"]
+            },
+            "description": "Query con filtro de categoría (science, space, physics, etc)."
+          }
+        },
+        {
+          "name": "Chat - Con Filtros de Tags",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"What are the biological effects of space radiation?\",\n  \"filters\": {\n    \"tags\": [\"radiation\", \"microgravity\", \"cells\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/chat",
+              "host": ["{{base_url}}"],
+              "path": ["api", "chat"]
+            },
+            "description": "Query con filtros de tags específicos."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📄 Document Management",
+      "item": [
+        {
+          "name": "Get Document by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/documents/68e1ba390d50970aeef2b527",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "documents", "68e1ba390d50970aeef2b527"]
+            },
+            "description": "📄 Obtener documento completo por su _id de MongoDB, incluyendo todos sus chunks y metadatos."
+          }
+        },
+        {
+          "name": "Documents - Paginated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/documents/paginated?page=1&page_size=20&category=space",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "documents", "paginated"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Número de página (empezando en 1)"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20",
+                  "description": "Documentos por página (1-100)"
+                },
+                {
+                  "key": "category",
+                  "value": "space",
+                  "description": "Filtro opcional por categoría"
+                }
+              ]
+            },
+            "description": "📄 Paginación mejorada de documentos con filtros opcionales."
+          }
+        },
+        {
+          "name": "Documents by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/documents/by-category?category=space&skip=0&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "documents", "by-category"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "space",
+                  "description": "Categoría: general, mission, nasa, physics, planets, science, space, technology"
+                },
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "🏷️ Búsqueda de documentos por categoría específica."
+          }
+        },
+        {
+          "name": "Documents by Tags (ANY)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/documents/by-tags?tags=microgravity,bone,mice&match_all=false&skip=0&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "documents", "by-tags"],
+              "query": [
+                {
+                  "key": "tags",
+                  "value": "microgravity,bone,mice"
+                },
+                {
+                  "key": "match_all",
+                  "value": "false"
+                },
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "🏷️ Búsqueda de documentos que tengan AL MENOS uno de los tags."
+          }
+        },
+        {
+          "name": "Documents by Tags (ALL)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/documents/by-tags?tags=science,space&match_all=true&skip=0&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "documents", "by-tags"],
+              "query": [
+                {
+                  "key": "tags",
+                  "value": "science,space"
+                },
+                {
+                  "key": "match_all",
+                  "value": "true"
+                },
+                {
+                  "key": "skip",
+                  "value": "0"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "🏷️ Búsqueda de documentos que tengan TODOS los tags."
+          }
+        }
+      ]
+    },
+    {
+      "name": "📊 Metadata & Filters",
+      "item": [
+        {
+          "name": "Get Filter Values",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/filter-values",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "filter-values"]
+            },
+            "description": "📊 Obtener valores disponibles para filtros: categorías (8), tags (60+), totales."
+          }
+        },
+        {
+          "name": "Get Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/front/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "front", "stats"]
+            },
+            "description": "📊 Estadísticas generales: total documentos (536), chunks (22,674)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Diagnostics",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/diag/health",
+              "host": ["{{base_url}}"],
+              "path": ["diag", "health"]
+            },
+            "description": "🔧 Verifica el estado del servicio."
+          }
+        },
+        {
+          "name": "Test Retrieval",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"query\": \"What are the effects of microgravity?\",\n  \"top_k\": 5\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/diag/retrieval",
+              "host": ["{{base_url}}"],
+              "path": ["diag", "retrieval"]
+            },
+            "description": "🔧 Test de retrieval sin síntesis LLM."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}

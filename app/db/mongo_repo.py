@@ -258,7 +258,146 @@ class MongoRepository:
             logger.error(f"❌ facet_counts error: {e}")
             return {}
     
-    # === Frontend API Methods ===
+    # ============================================================================
+    # MÉTODOS SIMPLES PARA FRONTEND - Sin agrupar, devuelven chunks directos
+    # ============================================================================
+    
+    def get_all_chunks(self, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """
+        Obtener chunks directamente sin agrupar
+        
+        Args:
+            skip: Chunks a saltar para paginación
+            limit: Límite de chunks a retornar
+            filters: Filtros opcionales (ej: {"metadata.category": "space"})
+        
+        Returns:
+            Lista de chunks tal como están en MongoDB
+        """
+        try:
+            query = filters if filters else {}
+            
+            chunks = list(
+                self.collection
+                .find(query)
+                .skip(skip)
+                .limit(limit)
+                .sort("_id", -1)  # Más recientes primero
+            )
+            
+            logger.info(f"📄 Retrieved {len(chunks)} chunks (filters: {query})")
+            return chunks
+            
+        except PyMongoError as e:
+            logger.error(f"❌ get_all_chunks error: {e}")
+            return []
+    
+    def count_all_chunks(self, filters: Optional[Dict[str, Any]] = None) -> int:
+        """
+        Contar total de chunks con filtros opcionales
+        
+        Args:
+            filters: Filtros opcionales
+        
+        Returns:
+            Total de chunks que cumplen los filtros
+        """
+        try:
+            query = filters if filters else {}
+            total = self.collection.count_documents(query)
+            
+            logger.info(f"📊 Total chunks: {total} (filters: {query})")
+            return total
+            
+        except PyMongoError as e:
+            logger.error(f"❌ count_all_chunks error: {e}")
+            return 0
+    
+    def get_unique_papers(self, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """
+        Obtener papers únicos agrupados por pk (1 resultado por paper)
+        
+        Args:
+            skip: Papers a saltar para paginación
+            limit: Límite de papers a retornar
+            filters: Filtros opcionales (ej: {"metadata.category": "space"})
+        
+        Returns:
+            Lista de papers únicos con metadata agregada
+        """
+        try:
+            # Pipeline de agregación
+            pipeline = []
+            
+            # Agregar filtros si existen
+            if filters:
+                pipeline.append({"$match": filters})
+            
+            # Agrupar por pk (cada paper único)
+            pipeline.extend([
+                {
+                    "$group": {
+                        "_id": "$pk",  # Agrupar por pk
+                        "pk": {"$first": "$pk"},
+                        "source_type": {"$first": "$source_type"},
+                        "source_url": {"$first": "$source_url"},
+                        "category": {"$first": "$metadata.category"},
+                        "tags": {"$first": "$metadata.tags"},
+                        "article_metadata": {"$first": "$metadata.article_metadata"},
+                        "total_chunks": {"$sum": 1},  # Contar chunks
+                        "text_preview": {"$first": "$text"},  # Preview del primer chunk
+                        "first_chunk_id": {"$first": "$_id"}  # ID del primer chunk
+                    }
+                },
+                {"$sort": {"first_chunk_id": -1}},  # Más recientes primero
+                {"$skip": skip},
+                {"$limit": limit}
+            ])
+            
+            papers = list(self.collection.aggregate(pipeline))
+            
+            logger.info(f"📄 Retrieved {len(papers)} unique papers (filters: {filters})")
+            return papers
+            
+        except PyMongoError as e:
+            logger.error(f"❌ get_unique_papers error: {e}")
+            return []
+    
+    def count_unique_papers(self, filters: Optional[Dict[str, Any]] = None) -> int:
+        """
+        Contar total de papers únicos (agrupados por pk)
+        
+        Args:
+            filters: Filtros opcionales
+        
+        Returns:
+            Total de papers únicos que cumplen los filtros
+        """
+        try:
+            # Pipeline de agregación para contar papers únicos
+            pipeline = []
+            
+            # Agregar filtros si existen
+            if filters:
+                pipeline.append({"$match": filters})
+            
+            # Agrupar por pk y contar
+            pipeline.extend([
+                {"$group": {"_id": "$pk"}},
+                {"$count": "total"}
+            ])
+            
+            result = list(self.collection.aggregate(pipeline))
+            total = result[0]["total"] if result else 0
+            
+            logger.info(f"📊 Total unique papers: {total} (filters: {filters})")
+            return total
+            
+        except PyMongoError as e:
+            logger.error(f"❌ count_unique_papers error: {e}")
+            return 0
+    
+    # === Frontend API Methods (OLD - Para RAG) ===
     
     def get_all_documents(self, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
