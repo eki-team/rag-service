@@ -260,13 +260,25 @@ class MongoRepository:
     
     # === Frontend API Methods ===
     
-    def get_all_documents(self, skip: int = 0, limit: int = 100) -> List[Dict[str, Any]]:
+    def get_all_documents(self, skip: int = 0, limit: int = 100, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """
         Obtener lista de documentos únicos (agrupados por source_id principal)
+        
+        Args:
+            skip: Documentos a saltar para paginación
+            limit: Límite de documentos a retornar
+            filters: Filtros opcionales para aplicar (ej: {"category": "space"})
         """
         try:
-            # Pipeline simplificado: agrupa por DOI para obtener documentos únicos
-            pipeline = [
+            # Pipeline con filtros opcionales
+            pipeline = []
+            
+            # Agregar filtros al inicio si existen
+            if filters:
+                pipeline.append({"$match": filters})
+            
+            # Continúa con el resto del pipeline original
+            pipeline.extend([
                 {
                     "$group": {
                         "_id": "$doi",  # Agrupar por DOI para evitar duplicados
@@ -282,7 +294,15 @@ class MongoRepository:
                         "tissue": {"$first": "$tissue"},
                         "assay": {"$first": "$assay"},
                         "chunk_count": {"$sum": 1},
-                        "text_preview": {"$first": "$text"}  # Preview del primer chunk
+                        "text_preview": {"$first": "$text"},  # Preview del primer chunk
+                        # Nuevos campos para frontend
+                        "pk": {"$first": "$pk"},
+                        "source_type": {"$first": "$source_type"},
+                        "source_url": {"$first": "$source_url"},
+                        "category": {"$first": "$metadata.category"},
+                        "tags": {"$first": "$metadata.tags"},
+                        "article_metadata": {"$first": "$metadata.article_metadata"},
+                        "total_chunks": {"$sum": 1}
                     }
                 },
                 {"$sort": {"year": -1}},
@@ -291,8 +311,16 @@ class MongoRepository:
                 {
                     "$project": {
                         "_id": 0,
-                        "source_id": 1,
+                        "pk": 1,
                         "title": 1,
+                        "source_type": 1,
+                        "source_url": 1,
+                        "category": 1,
+                        "tags": 1,
+                        "total_chunks": 1,
+                        "article_metadata": 1,
+                        # Campos legacy para compatibilidad
+                        "source_id": 1,
                         "year": 1,
                         "doi": 1,
                         "osdr_id": 1,
@@ -306,10 +334,10 @@ class MongoRepository:
                         "text_preview": {"$substr": ["$text_preview", 0, 200]}  # Primeros 200 chars
                     }
                 }
-            ]
+            ])
             
             documents = list(self.collection.aggregate(pipeline))
-            logger.info(f"📄 Retrieved {len(documents)} unique documents")
+            logger.info(f"📄 Retrieved {len(documents)} unique documents (filters: {filters})")
             return documents
         except PyMongoError as e:
             logger.error(f"❌ get_all_documents error: {e}")
@@ -449,6 +477,46 @@ class MongoRepository:
         except PyMongoError as e:
             logger.error(f"❌ get_document_by_id error: {e}")
             return None
+    
+    def get_chunks_by_document_id(self, document_id: str) -> List[Dict[str, Any]]:
+        """
+        📄 Obtener chunks por _id de MongoDB
+        
+        Args:
+            document_id: _id del documento en MongoDB (ObjectId como string)
+            
+        Returns:
+            Lista de chunks pertenecientes al documento
+        """
+        try:
+            from bson import ObjectId
+            
+            # Convertir string a ObjectId
+            try:
+                object_id = ObjectId(document_id)
+            except:
+                logger.error(f"❌ Invalid ObjectId format: {document_id}")
+                return []
+            
+            # Buscar chunks con el _id especificado
+            chunks = list(self.collection.find(
+                {"_id": object_id},
+                {"embedding": 0}  # Excluir embedding para performance
+            ).sort("chunk_index", 1))
+            
+            # Si no encuentra por _id, intentar por pk (compatibilidad)
+            if not chunks:
+                chunks = list(self.collection.find(
+                    {"pk": document_id},
+                    {"embedding": 0}
+                ).sort("chunk_index", 1))
+            
+            logger.info(f"📄 Found {len(chunks)} chunks for document_id: {document_id}")
+            return chunks
+            
+        except PyMongoError as e:
+            logger.error(f"❌ get_chunks_by_document_id error: {e}")
+            return []
     
     def get_filter_values(self) -> Dict[str, List[Any]]:
         """Obtener todos los valores únicos para cada filtro"""

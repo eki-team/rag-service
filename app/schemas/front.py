@@ -80,3 +80,12 @@ class DocumentDetailResponse(BaseModel):
     metadata: DocumentMetadata
     chunks: List[DocumentChunk]
     total_chunks: int
+
+
+class StatisticsResponse(BaseModel):
+    """📊 Respuesta con estadísticas generales de la base de datos"""
+    total_documents: int
+    total_chunks: int
+    unique_categories: List[str]
+    unique_tags: List[str]
+    source_types: List[str]
