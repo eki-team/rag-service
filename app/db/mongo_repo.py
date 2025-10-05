@@ -106,6 +106,8 @@ class MongoRepository:
                         "source_id": 1,
                         "title": 1,
                         "text": 1,
+                        "abstract": 1,  # Include abstract
+                        "publication_year": 1,  # Include publication_year
                         "section": 1,
                         "doi": 1,
                         "osdr_id": 1,
@@ -115,7 +117,7 @@ class MongoRepository:
                         "exposure": 1,
                         "assay": 1,
                         "tissue": 1,
-                        "year": 1,
+                        "year": 1,  # Keep for backwards compatibility
                         "venue": 1,
                         "url": 1,
                         "source_url": 1,  # Include source_url

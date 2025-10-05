@@ -41,13 +41,15 @@ class Citation(BaseModel):
     section: Optional[str] = None
     snippet: str = Field(..., description="Fragmento relevante del chunk")
     text: Optional[str] = None
+    abstract: Optional[str] = Field(None, description="Document abstract")
     
     # URLs and links
     url: Optional[str] = Field(None, description="Source URL from metadata or document")
     source_url: Optional[str] = Field(None, description="Original source URL")
     
     # Publication metadata
-    year: Optional[int] = None
+    publication_year: Optional[int] = Field(None, description="Year of publication")
+    year: Optional[int] = Field(None, description="Year (backwards compatibility)")
     venue: Optional[str] = None
     source_type: Optional[str] = None
     

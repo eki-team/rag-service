@@ -27,6 +27,11 @@ from app.services.rag.reranker import AdvancedReranker
 from app.services.embeddings import get_embeddings_service
 from app.core.settings import settings
 
+# === Advanced RAG v2.0 Components ===
+from app.services.rag.bm25_retriever import BM25Retriever, get_bm25_retriever, init_bm25_retriever
+from app.services.rag.rrf_fusion import fuse_results
+from app.services.rag.cross_encoder_reranker import CrossEncoderReranker, get_cross_encoder_reranker
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -41,10 +46,22 @@ class RAGPipeline:
         self.context_builder = ContextBuilder(max_tokens=4000)  # Aumentado para mejor contexto
         self.embeddings = get_embeddings_service()
         
+        # === Advanced RAG v2.0 Components ===
+        # BM25 retriever (initialized lazily or at startup)
+        self.use_bm25 = True  # Enable hybrid retrieval
+        self.use_cross_encoder = True  # Enable cross-encoder reranking
+        
         # Parámetros configurables (pueden sobreescribirse)
+        self.TOP_K_DENSE = 25    # Dense retrieval top-k
+        self.TOP_K_BM25 = 25     # BM25 retrieval top-k
+        self.RRF_K = 60          # RRF constant
+        self.TOP_K_RRF = 24      # After RRF fusion
+        self.TOP_K_RERANK = 10   # After cross-encoder reranking
+        self.TOP_SYNTHESIS = 6   # Final chunks for synthesis
+        
+        # Legacy params (backward compatibility)
         self.TOP_K = 40          # Candidate set inicial
         self.TOP_RERANK = 12     # Pasajes para reranking
-        self.TOP_SYNTHESIS = 6   # Pasajes finales para síntesis
     
     async def answer(
         self,
@@ -89,30 +106,55 @@ class RAGPipeline:
         query_vec = self._get_embedding(query_expanded)
         
         # ===========================================================================
-        # FASE 3: RETRIEVAL (TOP_K candidatos)
+        # FASE 3: HYBRID RETRIEVAL (Dense + BM25 + RRF Fusion)
         # ===========================================================================
-        # Usar TOP_K para recuperación inicial (más candidatos = mejor reranking)
-        retrieval_k = self.TOP_K if self.TOP_K > top_k else top_k * 3
-        
-        chunks = self.retriever.retrieve(query_vec, filters, retrieval_k)
+        if self.use_bm25 and get_bm25_retriever():
+            # Hybrid retrieval: Dense + BM25 + RRF
+            chunks = await self._retrieve_hybrid(
+                query=query,
+                query_expanded=query_expanded,
+                query_vec=query_vec,
+                filters=filters,
+                expanded_terms=expanded_terms
+            )
+            logger.info(f"📚 Hybrid retrieval: {len(chunks)} candidates after RRF fusion")
+        else:
+            # Fallback: Dense retrieval only
+            retrieval_k = self.TOP_K if self.TOP_K > top_k else top_k * 3
+            chunks = self.retriever.retrieve(query_vec, filters, retrieval_k)
+            logger.info(f"📚 Dense retrieval: {len(chunks)} initial candidates")
         
         if not chunks:
             return self._empty_response(query, filters, session_id)
         
-        logger.info(f"📚 Retrieved {len(chunks)} initial candidates")
-        
         # ===========================================================================
-        # FASE 4: ADVANCED RERANKING
+        # FASE 4: ADVANCED RERANKING (Cross-Encoder or Custom)
         # ===========================================================================
-        reranker = AdvancedReranker(
-            query=query,
-            expanded_terms=expanded_terms,
-            top_rerank=self.TOP_RERANK,
-            top_synthesis=self.TOP_SYNTHESIS,
-        )
-        
-        reranked_chunks = reranker.rerank(chunks)
-        logger.info(f"🔄 Reranked to {len(reranked_chunks)} chunks for synthesis")
+        if self.use_cross_encoder:
+            # Use cross-encoder reranking (v2.0)
+            cross_encoder = get_cross_encoder_reranker()
+            reranked_chunks = cross_encoder.rerank(
+                query=query,
+                chunks=chunks,
+                top_k=self.TOP_K_RERANK,
+                mmr_lambda=0.7,
+                max_per_doc=2,
+                apply_section_boost=True
+            )
+            logger.info(f"🔄 Cross-encoder reranked to {len(reranked_chunks)} chunks")
+            
+            # Limit to TOP_SYNTHESIS for context
+            reranked_chunks = reranked_chunks[:self.TOP_SYNTHESIS]
+        else:
+            # Fallback: Custom 8-signal reranker
+            reranker = AdvancedReranker(
+                query=query,
+                expanded_terms=expanded_terms,
+                top_rerank=self.TOP_RERANK,
+                top_synthesis=self.TOP_SYNTHESIS,
+            )
+            reranked_chunks = reranker.rerank(chunks)
+            logger.info(f"🔄 Custom reranked to {len(reranked_chunks)} chunks for synthesis")
         
         # ===========================================================================
         # FASE 5: CONTEXT BUILDING
@@ -158,6 +200,54 @@ class RAGPipeline:
             metrics=metrics,
             session_id=session_id,
         )
+    
+    async def _retrieve_hybrid(
+        self,
+        query: str,
+        query_expanded: str,
+        query_vec: List[float],
+        filters: Optional[FilterFacets],
+        expanded_terms: List[str]
+    ) -> List[Dict[str, Any]]:
+        """
+        Hybrid retrieval: Dense + BM25 + RRF Fusion
+        
+        Steps:
+        1. Dense retrieval (embeddings) → top 25
+        2. BM25 retrieval (lexical) → top 25
+        3. RRF fusion → top 24 for reranking
+        """
+        # 1. Dense retrieval
+        dense_chunks = self.retriever.retrieve(query_vec, filters, self.TOP_K_DENSE)
+        logger.info(f"  📊 Dense: {len(dense_chunks)} chunks")
+        
+        # 2. BM25 retrieval
+        bm25_retriever = get_bm25_retriever()
+        if bm25_retriever:
+            bm25_chunks = bm25_retriever.search(
+                query=query,
+                expanded_terms=expanded_terms,
+                top_k=self.TOP_K_BM25,
+                boost_expanded=0.5
+            )
+            logger.info(f"  📊 BM25: {len(bm25_chunks)} chunks")
+        else:
+            logger.warning("⚠️  BM25 retriever not initialized, using dense only")
+            bm25_chunks = []
+        
+        # 3. RRF Fusion
+        if bm25_chunks:
+            fused_chunks = fuse_results(
+                dense_results=dense_chunks,
+                bm25_results=bm25_chunks,
+                k=self.RRF_K,
+                top_k=self.TOP_K_RRF
+            )
+            logger.info(f"  🔀 RRF: {len(fused_chunks)} chunks (k={self.RRF_K})")
+            return fused_chunks
+        else:
+            # Fallback to dense only
+            return dense_chunks[:self.TOP_K_RRF]
     
     def _get_embedding(self, text: str) -> List[float]:
         """Generar embedding con OpenAI text-embedding-3-small (1536 dims)"""
@@ -248,16 +338,18 @@ class RAGPipeline:
                 osdr_id=chunk.get("osdr_id"),
                 
                 # Content
-                section=section,
+                section=section if section and section.lower() != "unknown" else "Unknown",
                 snippet=snippet,
-                text=title,
+                text=chunk.get("text", ""),  # Full text content
+                abstract=chunk.get("abstract"),  # Add abstract
                 
                 # URLs
                 url=url,
                 source_url=source_url,
                 
                 # Publication metadata
-                year=chunk.get("year"),
+                publication_year=chunk.get("publication_year") or chunk.get("year"),  # Prefer publication_year
+                year=chunk.get("publication_year") or chunk.get("year"),  # Keep year for backwards compatibility
                 venue=chunk.get("venue"),
                 source_type=chunk.get("source_type"),
                 
