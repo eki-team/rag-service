@@ -2,11 +2,7 @@
 # ================================
 
 # Core evaluation frameworks
-ragas>=0.1.0
-langchain>=0.1.0
-langchain-openai>=0.0.5
-datasets>=2.14.0
-python-dotenv>=1.0.0
+
 
 # Already in main requirements.txt (for reference):
 # httpx>=0.25.0
